@@ -1,0 +1,50 @@
+# Dependências
+node_modules/
+
+# Variáveis de ambiente
+.env
+.env.local
+.env.*.local
+
+# Banco local de desenvolvimento (SQLite)
+dados.sqlite
+dados.sqlite-journal
+dados.sqlite-wal
+*.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# Editores e IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Cobertura de testes
+coverage/
+*.lcov
+
+# Artefatos temporários do Vitest
+*.timestamp-*
+
+# Build e dist
+dist/
+build/
+out/
+
+# Temporários
+tmp/
+temp/
+*.tmp
