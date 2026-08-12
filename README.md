@@ -82,6 +82,82 @@ git push -u origin historia/ong-aceita-doacao
 Abra o Pull Request no GitHub, preencha o template, espere o **CI ficar verde** e
 peça a revisão de **outro integrante**. Só então faça o merge.
 
+## Stakeholders, objetivos e conflitos
+
+Pontos Teóricos Abordados
+Quem é Stakeholder e Tipos:
+
+Usuário:
+- Doador de Alimentos (Restaurante/Mercado): Cadastra alimentos excedentes no sistema.
+- ONG / Entidade Receptora: Navega pelas doações disponíveis e aceita os itens para redistribuição.
+
+Patrocinador (Sponsor):
+- Equipe de Desenvolvimento (Code4Food / Alunos) e Professor/Avaliações: Definem o escopo, garantem as entregas ágeis por unidade (U1, U2, U3) e sustentam a plataforma.
+
+Operação:
+- Desenvolvedores / Mantenedores do CI (GitHub Actions): Garantem que a aplicação suba no npm start, o banco de dados (SQLite/PostgreSQL) rode e os testes fiquem "verdes".
+
+Regulador:
+- Vigilância Sanitária (Anvisa) / Legislação Local de Doação de Alimentos: Exigem parâmetros mínimos de validade e condições de conservação para o alimento doado.
+
+Objetivos de Negócio vs. Necessidades do Usuário:
+
+- Objetivo do Produto (Negócio): Conectar doadores a ONGs em tempo hábil para evitar o desperdício de alimentos excedentes antes do vencimento.
+- Necessidade do Doador: Anunciar lotes de alimentos de forma ultra-rápida (interface simples via mobile no public/index.html).
+- Necessidade da ONG: Ver doações disponíveis perto de sua localização e poder aceitá-las para que o item saia da lista pública de pendentes.
+
+Regras de Negócio Implícitas vs. Explícitas:
+
+- No código inicial, há regras implícitas no fluxo de negócio (ex: "A partir do momento que uma ONG aceita, a comida não pode mais aparecer para as outras").
+- Precisam ser escritas como regras explícitas e verificáveis, cobrindo validações e critérios de aceite no src/doacoes.js e em tests/doacoes.test.js.
+
+
+Conflitos de Prioridade:
+- Surgem entre o time de desenvolvimento (prazos e simplicidade da U1) e as exigências do produto/reguladores (segurança do alimento vs. agilidade no cadastro).
+
+## Mapa de Stakeholders:
+<img width="2720" height="2800" alt="mapa_stakeholders_circulos_concentricos (1)" src="https://github.com/user-attachments/assets/9657bf71-c3f4-4c43-b8bb-35712d838cdb" />
+
+## Resolução de Conflito entre Stakeholders
+Fala do Stakeholder A (Doador - Restaurante):
+
+"Preciso publicar um lote de refeições em menos de 10 segundos pelo celular sem ter que preencher formulários longos, senão acabo jogando fora no lixo comum."
+
+Fala do Stakeholder B (Representante da ONG / Vigilância Sanitária):
+
+"Precisamos que cada doação informe o horário do preparo, a forma de conservação e fotos do lote, pois não podemos aceitar comida sem rastreabilidade de segurança alimentar."
+
+Descrição do Conflito:
+Conflito entre Facilidade/Velocidade no Cadastro (Interesse do Doador para não desperdiçar) e Garantia de Qualidade/Segurança Alimentar (Interesse da ONG e Regulador para evitar contaminação).
+
+Critério de Decisão Proposto:
+Adotar um Formulário Dinâmico em 2 Passos com Padrões Padrão (Defaults):
+
+O doador precisa informar obrigatoriamente apenas Nome do Alimento, Quantidade e Validade/Horário de Coleta (campos vitais para a ONG).
+
+Campos sanitários (como Condição de Armazenamento) vêm pré-selecionados com opções simples (ex: "Sob refrigeração" ou "Temperatura ambiente") e um termo de responsabilidade de aceite rápido na interface do index.html
+
+## Tradução de 3 Regras de Negócio Implícitas do Caso em Enunciados Explícitos
+Com base na lógica de domínio do projeto (src/doacoes.js e na "História Zero"):
+
+Regra 1 (Exclusividade de Aceite / Remoção da Lista Pública)
+
+Implícita: "Quando a ONG pega a comida, ela não pode mais aparecer na tela."
+
+Explícita e Verificável: [RN01] Quando o status de uma doação é alterado para "ACEITA", o sistema deve atualizar seu registro no repositório e excluí-la imediatamente do resultado da consulta de doações disponíveis (GET /doacoes?status=PENDENTE).
+
+Regra 2 (Bloqueio de Aceites Duplicados)
+
+Implícita: "Duas ONGs não podem aceitar a mesma doação ao mesmo tempo."
+
+Explícita e Verificável: [RN02] A operação de aceite (POST /doacoes/:id/aceitar) deve lançar um erro de conflito e manter o aceite original caso a doação informada já possua um id_ong_receptora associado.
+
+Regra 3 (Obrigatoriedade de Dados do Doador na Publicação)
+
+Implícita: "Não dá para publicar doação fantasma."
+
+Explícita e Verificável: [RN03] A criação de uma doação requer obrigatoriamente a presença dos atributos id_doador, descricao e quantidade no corpo da requisição; caso contrário, o módulo src/doacoes.js deve rejeitar o cadastro lançando um erro de validação antes de persistir no banco de dados.
+
 ## O que já está pronto e o que falta
 
 Pronto: estrutura do projeto, interface básica, rota de saúde, **conexão com o banco e o schema** (`src/db.js`), CI configurado e um teste passando (prova que a aplicação sobe).
