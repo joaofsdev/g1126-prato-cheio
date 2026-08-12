@@ -116,7 +116,7 @@ Conflitos de Prioridade:
 - Surgem entre o time de desenvolvimento (prazos e simplicidade da U1) e as exigências do produto/reguladores (segurança do alimento vs. agilidade no cadastro).
 
 ## Mapa de Stakeholders:
-<img width="2720" height="2800" alt="mapa_stakeholders_circulos_concentricos (1)" src="https://github.com/user-attachments/assets/9657bf71-c3f4-4c43-b8bb-35712d838cdb" />
+<img width="2000" height="2100" alt="mapa_stakeholders_circulos_concentricos (1)" src="https://github.com/user-attachments/assets/9657bf71-c3f4-4c43-b8bb-35712d838cdb" />
 
 ## Resolução de Conflito entre Stakeholders
 Fala do Stakeholder A (Doador - Restaurante):
