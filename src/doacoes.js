@@ -17,9 +17,11 @@ export async function aceitar(id, ong) {
   if (!doacao) {
     throw new Error('Doação não encontrada');
   }
-  if (doacao.status !== 'disponivel') {
+  // A checagem de "já disponível?" acontece dentro do próprio UPDATE
+  // no (repositorio.marcarComoAceita)
+  const aceita = await repositorio.marcarComoAceita(id, ong);
+  if (!aceita) {
     throw new Error('Doação já foi aceita por outra ONG');
   }
-  await repositorio.marcarComoAceita(id, ong);
   return { ...doacao, status: 'aceita', ong };
 }
