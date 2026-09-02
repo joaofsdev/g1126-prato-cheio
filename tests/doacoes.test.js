@@ -80,6 +80,21 @@ describe('aceitar uma doação', () => {
     expect(res.body).toHaveLength(0);
   });
 
+  it('quando duas ONGs tentam aceitar ao mesmo tempo, só uma consegue', async () => {
+    const criada = await request(app)
+      .post('/api/doacoes')
+      .send({ tipo: 'Feijão', quantidade: '15 kg', validade: '2026-08-12' });
+
+    const id = criada.body.id;
+    const [resA, resB] = await Promise.all([
+      request(app).post(`/api/doacoes/${id}/aceitar`).send({ ong: 'ONG X' }),
+      request(app).post(`/api/doacoes/${id}/aceitar`).send({ ong: 'ONG Y' }),
+    ]);
+
+    const statuses = [resA.status, resB.status].sort();
+    expect(statuses).toEqual([200, 400]);
+  });
+
   it('recusa aceitar uma doação que já foi aceita por outra ONG', async () => {
     const criada = await request(app)
       .post('/api/doacoes')
