@@ -18,11 +18,6 @@ export async function buscarPorId(id) {
   return rows[0];
 }
 
-/**
- Marca a doação como aceita, mas só se ela ainda estiver 'disponivel', evita que duas
- ONGs aceitem a mesma doação em uma condição de corrida.
- Devolve `true` se esta chamada foi quem aceitou, `false` se já estava aceita.
- */
 export async function marcarComoAceita(id, ong) {
   const { alteradas } = await query(
     `UPDATE doacoes SET status = 'aceita', ong = ? WHERE id = ? AND status = 'disponivel'`,
