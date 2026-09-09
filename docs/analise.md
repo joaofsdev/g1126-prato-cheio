@@ -58,22 +58,72 @@ Uma doação deve ser aceita por apenas uma ONG, evitando que duas instituiçõe
 
 Essa restrição exige que a solução controle o estado da doação e impeça um segundo aceite depois que ela já estiver reservada. Portanto, qualquer alternativa de solução precisa garantir exclusividade no processo de aceite.
 
-Stakeholders
-Stakeholder	Interesse	Influência	O que espera
-Doador (restaurante, supermercado)	Reduzir desperdício, responsabilidade social	Alta — sem ele não há oferta	Cadastro rápido, sem burocracia
-ONG / Instituição receptora	Receber alimentos para distribuição	Alta — sem ela não há demanda	Visualizar e aceitar doações de forma simples
-Comunidade atendida	Acesso a alimentação	Baixa (indireta)	Mais refeições disponíveis
-Equipe de desenvolvimento	Aprender e entregar	Média	Escopo factível, CI verde, código testado
+## Stakeholders
+
+| Stakeholder | O que quer | Interesse | Influência | Consequência para a iteração 1 |
+|---|---|---|---|---|
+| Doadores (restaurantes, padarias e mercados) | Disponibilizar alimentos excedentes de forma rápida e com pouca burocracia. | Alto | Alto | A publicação da doação deve exigir poucas informações e ser simples de realizar. |
+| ONGs e cozinhas comunitárias | Encontrar doações disponíveis a tempo e ter previsibilidade para organizar a retirada. | Alto | Alto | A iteração deve permitir visualizar as doações disponíveis e aceitar uma doação para retirada. |
+| Motoristas voluntários | Conseguir utilizar o sistema pelo celular mesmo durante deslocamentos e com conexão instável. | Alto | Baixo | A solução deve funcionar no navegador do celular e manter uma interface simples e leve. |
+| Marta (coordenadora) | Organizar a operação, acompanhar o crescimento do projeto e demonstrar seu impacto. | Alto | Alto | A iteração deve registrar informações básicas das doações e dos aceites, criando dados que possam ser acompanhados posteriormente. |
+| Vigilância Sanitária | Garantir rastreabilidade mínima dos alimentos doados, incluindo informações como tipo, quantidade e validade. | Alto | Alto | A publicação deve registrar os dados mínimos necessários para identificar e acompanhar a doação. |
+| Comunidade e pessoas beneficiadas* | Receber mais alimentos próprios para consumo por meio das organizações atendidas pelo projeto. | Alto | Baixo | A iteração deve priorizar um fluxo que reduza o tempo entre a disponibilização e o aceite da doação. |
+
+\* **Stakeholder adicional identificado pelo grupo:** a comunidade e as pessoas beneficiadas não são apresentadas no caso como participantes diretos da operação do sistema, mas são diretamente afetadas pelo resultado do projeto, pois o aproveitamento das doações pode aumentar a quantidade de alimentos e refeições disponibilizados pelas organizações.
+
 Objetivos de impacto
 Reduzir o tempo entre a disponibilidade de alimento excedente e sua destinação a quem precisa.
 Dar visibilidade às doações disponíveis em tempo real.
 Garantir que cada doação seja aceita por no máximo uma ONG (evitar conflito de retirada).
-Regras de negócio
-Uma doação possui: tipo de alimento, quantidade, validade e status.
-Status possíveis: disponivel (padrão ao criar) e aceita.
-Campos obrigatórios para publicar: tipo, quantidade, validade.
-Uma doação aceita não pode ser aceita novamente por outra ONG.
-Doações aceitas não aparecem na listagem de disponíveis.
+
+## Regras de negócio
+
+### Regra 1 — Doação expirada não deve permanecer disponível
+
+**Onde estava:** comportamento esperado a partir da validade e da janela curta de retirada dos alimentos perecíveis.
+
+**Enunciado explícito:** uma doação só pode permanecer disponível para aceite enquanto estiver dentro do seu período de validade ou da janela de retirada informada. Após esse período, ela não deve ser apresentada como disponível para novas aceitações.
+
+**Como verificar:** cadastrar uma doação com validade ou janela de retirada encerrada e verificar que ela não aparece entre as doações disponíveis para aceite.
+
+### Regra 2 — Uma doação aceita fica reservada para uma única ONG
+
+**Onde estava:** comportamento atual do processo, no qual uma ONG precisa organizar a retirada após demonstrar interesse pela doação.
+
+**Enunciado explícito:** quando uma ONG aceitar uma doação disponível, essa doação deve ficar reservada para ela e não poderá ser aceita por outra ONG.
+
+**Como verificar:** disponibilizar uma doação, realizar o aceite por uma ONG e tentar realizar um segundo aceite. O segundo aceite deve ser impedido.
+
+### Regra 3 — O que acontece quando uma ONG aceita e não realiza a retirada
+
+**Tipo:** REGRA AUSENTE.
+
+**Onde estava:** silêncio do caso. O caso informa que a ONG pode aceitar uma doação, mas não define o que deve acontecer caso ela não realize a retirada.
+
+**Enunciado a decidir:** deve ser definido se uma doação aceita volta a ficar disponível, é cancelada ou permanece vinculada à ONG quando a retirada não acontece dentro do prazo.
+
+**Como verificar:** após a decisão, aceitar uma doação e deixar o prazo de retirada expirar. O sistema deverá aplicar automaticamente o comportamento definido para essa situação.
+
+**Quem decide:** Marta, como coordenadora da operação, em conjunto com as organizações participantes do piloto.
+
+## Conflitos de prioridade
+
+### Conflito — Simplicidade para o doador x rastreabilidade
+
+**Fala do doador:** "Eu quero publicar uma doação rapidamente, preenchendo o mínimo possível de informações."
+
+**Fala da Vigilância Sanitária:** "Eu preciso que cada doação tenha informações mínimas que permitam identificar e rastrear o alimento doado."
+
+**Eixo do trade-off:** simplicidade e rapidez no cadastro x quantidade de informações necessárias para garantir rastreabilidade.
+
+**O que o doador perde:** quanto mais campos obrigatórios existirem, maior será o tempo e o esforço necessários para publicar uma doação, aumentando a burocracia do processo.
+
+**O que a Vigilância Sanitária perde:** se informações importantes não forem registradas, diminui a capacidade de identificar e rastrear adequadamente os alimentos doados.
+
+**Critério de decisão:** na iteração 1, serão obrigatórios no cadastro apenas os dados mínimos necessários para a rastreabilidade da doação: tipo de alimento, quantidade e validade ou janela de retirada. Informações adicionais deverão ser opcionais enquanto não houver uma exigência que justifique torná-las obrigatórias.
+
+**Saída escolhida:** conciliar. A solução mantém obrigatórios os dados mínimos necessários para a rastreabilidade e evita exigir informações adicionais que aumentariam a burocracia para o doador.
+
 Histórias de usuário
 #	História (Como… quero… para…)	INVEST: o que falha
 0.1	Como doador, quero publicar uma doação informando tipo, quantidade e validade, para que ONGs possam vê-la.	—
