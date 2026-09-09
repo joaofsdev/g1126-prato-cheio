@@ -2,16 +2,62 @@ Documento de Análise — Prato Cheio
 
 Trabalho 1 · máximo 4 páginas · entrega na Aula 5
 
+## Pedido do cliente e reformulação do problema
+
+### Pedido inicial
+
+"Precisamos de um aplicativo onde restaurantes e supermercados possam cadastrar alimentos que estão sobrando, para que ONGs encontrem essas doações e façam a retirada antes que os alimentos sejam descartados."
+
+### Solução embutida no pedido
+
+O pedido já pressupõe que a solução deve ser um aplicativo para cadastrar e consultar doações. Porém, definir um aplicativo antes de compreender completamente o problema pode limitar outras alternativas possíveis.
+
+### Problema real
+
+Restaurantes, supermercados e outros doadores possuem alimentos próprios para consumo que acabam sendo descartados porque não existe uma forma rápida e confiável de conectar esses excedentes às ONGs que conseguem recebê-los dentro do período adequado para consumo.
+
+Portanto, o problema a ser resolvido não é "criar um aplicativo", mas reduzir a dificuldade e o tempo necessários para conectar alimentos excedentes a organizações capazes de aproveitá-los.
+
 Problema central
 
 No Brasil, toneladas de alimentos em bom estado são descartadas diariamente por restaurantes, supermercados e produtores, enquanto ONGs e comunidades enfrentam insegurança alimentar. A dificuldade está na conexão rápida e confiável entre quem tem excedente e quem pode aproveitá-lo: o alimento é perecível e a janela de oportunidade é curta.
 
 O Prato Cheio resolve esse problema criando um canal digital simples onde doadores publicam alimentos disponíveis e ONGs podem visualizá-los e aceitá-los antes que se percam.
 
-Incertezas
-Doadores terão disciplina para publicar doações com frequência?
-As ONGs conseguirão buscar o alimento no tempo da validade informada?
-Um fluxo sem autenticação (Unidade 1) é suficiente para validar o modelo?
+## Incertezas
+
+Antes de definir ou evoluir a solução, existem questões que precisam ser esclarecidas:
+
+1. Os doadores terão disciplina para publicar as doações com frequência e com informações corretas?
+
+2. As ONGs conseguirão buscar o alimento dentro do período de validade informado?
+
+3. Um fluxo sem autenticação na Unidade 1 é suficiente para validar o modelo?
+
+4. As ONGs consultarão o sistema com frequência suficiente para encontrar as doações antes que elas expirem?
+
+5. Os doadores estarão dispostos a utilizar mais um canal digital no processo de destinação dos alimentos?
+
+## Restrições
+
+### Restrição de prazo
+
+O projeto deve ser desenvolvido e entregue dentro do período definido para a disciplina, com evolução incremental ao longo das unidades.
+
+Essa restrição limita soluções que demandem muito tempo de desenvolvimento, como um aplicativo mobile completo, integrações complexas ou uma infraestrutura de grande porte. Por isso, a solução inicial precisa ter um escopo reduzido e viável dentro do prazo disponível.
+
+### Restrição técnica
+
+Na Unidade 1, o projeto utiliza uma estrutura simples, com API REST, frontend leve e banco SQLite, sem mecanismos completos de autenticação.
+
+Essa restrição limita funcionalidades que dependam de identificação segura dos usuários, controle avançado de permissões ou infraestrutura mais complexa. Essas funcionalidades podem ser incorporadas nas próximas evoluções do projeto.
+
+### Restrição de negócio
+
+Uma doação deve ser aceita por apenas uma ONG, evitando que duas instituições considerem o mesmo alimento reservado para retirada.
+
+Essa restrição exige que a solução controle o estado da doação e impeça um segundo aceite depois que ela já estiver reservada. Portanto, qualquer alternativa de solução precisa garantir exclusividade no processo de aceite.
+
 Stakeholders
 Stakeholder	Interesse	Influência	O que espera
 Doador (restaurante, supermercado)	Reduzir desperdício, responsabilidade social	Alta — sem ele não há oferta	Cadastro rápido, sem burocracia
