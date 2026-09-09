@@ -12,6 +12,7 @@ Conecta doadores de alimentos excedentes a ONGs, antes que a comida se perca.
 - Pedro Israel — @p33drinho
 - Caio Rosa — @caiorosa31
 - Iago Koch — @iagokoch
+- Patrick Gusmão @patrickgusmao10
 
 ## Como rodar
 
