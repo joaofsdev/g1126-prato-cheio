@@ -124,11 +124,26 @@ Garantir que cada doação seja aceita por no máximo uma ONG (evitar conflito d
 
 **Saída escolhida:** conciliar. A solução mantém obrigatórios os dados mínimos necessários para a rastreabilidade e evita exigir informações adicionais que aumentariam a burocracia para o doador.
 
-Histórias de usuário
-#	História (Como… quero… para…)	INVEST: o que falha
-0.1	Como doador, quero publicar uma doação informando tipo, quantidade e validade, para que ONGs possam vê-la.	—
-0.2	Como ONG, quero ver a lista de doações disponíveis, para escolher qual buscar.	—
-0.3	Como ONG, quero aceitar uma doação, para reservá-la e retirá-la.	—
+## Histórias de usuário
+
+| # | História (Como… quero… para…) | INVEST: o que falha | Ação corretiva |
+|---|---|---|---|
+| 1 | Como doador, quero publicar uma doação informando os dados essenciais do alimento, para reduzir a chance de alimentos próprios para consumo serem descartados. | N — Negociável: a história já determina quais dados devem ser informados. | Mover os detalhes dos campos obrigatórios para os critérios de aceite e manter na história apenas o comportamento percebido pelo doador. |
+| 2 | Como ONG, quero visualizar as doações disponíveis, para identificar rapidamente alimentos que possam ser retirados antes de perderem a validade. | T — Testável: “rapidamente” não possui uma medida objetiva. | Definir nos critérios de aceite uma condição mensurável para disponibilidade e tempo de resposta da consulta. |
+| ★ História 0 | Como ONG, quero aceitar uma doação disponível, para garantir sua retirada e evitar que o alimento seja desperdiçado. | I — Independente: depende da existência de uma doação previamente publicada. | Manter a dependência explícita e organizar o fluxo para que publicação e aceite formem uma fatia vertical executável. |
+
+| 4 | Como motorista voluntário, quero confirmar a coleta pelo celular, para registrar a retirada mesmo durante meus deslocamentos. | T — Testável: a história não define como verificar o comportamento em uma conexão instável. | Levar para os critérios de aceite a condição de uso em celular e conexão instável, com ambiente e medida verificáveis. |
+| 5 | Como Vigilância Sanitária, quero que as doações mantenham informações mínimas de rastreabilidade, para possibilitar a identificação do alimento doado quando necessário. | N — Negociável: definir campos específicos diretamente na história reduziria a possibilidade de negociação. | Manter a história focada na necessidade de rastreabilidade e definir os dados mínimos nos critérios de aceite conforme as regras do negócio. |
+| 6 | Como ONG, quero visualizar doações disponíveis que ainda estejam dentro da janela de retirada, para escolher uma opção que possa ser coletada a tempo. | P — Pequena: esta linha é uma fatia derivada de uma história gigante. | Isolar apenas o caminho de descoberta das doações disponíveis, sem incluir aceite ou retirada. |
+| 7 | Como ONG, quero aceitar uma doação disponível, para assumir a retirada daquele alimento antes que ele seja destinado a outra organização. | I — Independente: depende da existência de uma doação previamente publicada. | Manter a dependência explícita e tratar o aceite como uma fatia funcional própria, aplicando a regra de exclusividade. |
+| 8 | Como motorista voluntário, quero confirmar a retirada de uma doação pelo celular, para registrar que o alimento foi coletado dentro da janela prevista. | T — Testável: precisa de uma condição observável para confirmar o momento da coleta. | Definir nos critérios de aceite o registro do horário da coleta e a condição de uso pelo celular em conexão instável. |
+
+**Por que ela:** a História 0 escolhida foi o aceite de uma doação disponível por uma ONG, porque é a menor fatia capaz de demonstrar o fluxo central do Prato Cheio de ponta a ponta. Para isso, uma doação precisa existir, ser visualizada e aceita, e após o aceite ela não pode continuar disponível para outra ONG. Além disso, essa fatia deve registrar o instante da publicação e o instante do aceite, permitindo medir o tempo entre a disponibilização e a destinação da doação.
+
+**O que ficou fora:** autenticação, notificações, filtros avançados, fotos, localização detalhada e outras melhorias que não são necessárias para provar o fluxo principal nesta primeira fatia.
+
+**Por quê:** esses itens aumentariam o escopo da primeira entrega sem reduzir o principal risco que queremos validar agora. A História 0 deve permanecer pequena, mas suficiente para testar a regra central de exclusividade do aceite e começar a produzir a medição de tempo que ainda não existe.
+
 Critérios de aceite
 
 História 0.1 — Publicar doação
@@ -168,6 +183,41 @@ Problema: Falta de canal rápido entre doadores de alimentos e ONGs receptoras.
 Alternativas: (1) Formulário via Google Forms — simples mas sem integração, sem atualização de status. (2) App mobile nativo — poderoso mas custo alto para MVP. (3) API REST com frontend leve — equilíbrio entre simplicidade e funcionalidade.
 Decisão e justificativa: API REST + página web estática. Permite validar o fluxo ponta a ponta com o mínimo de infraestrutura e possibilita evolução incremental.
 Riscos e limitações: Sem autenticação na U1; sem notificações; sem controle de validade automático.
-Uso de IA
 
-Documento gerado com auxílio de IA para estruturação e redação. O grupo revisou, ajustou o escopo e validou os critérios de aceite contra os testes do template.
+## Uso de IA
+
+A IA foi utilizada como apoio para gerar e revisar histórias de usuário. As sugestões foram confrontadas com o caso, com o mapa de stakeholders e com os critérios INVEST antes de serem aceitas pelo grupo.
+
+### História #1
+
+**O que a IA sugeriu:** incluir diretamente na história os dados que deveriam ser informados na publicação da doação.
+
+**O que o grupo mudou:** decidimos manter a história focada na necessidade do doador e deixar os detalhes dos campos obrigatórios para os critérios de aceite.
+
+**Por quê:** especificar campos diretamente na história reduz sua característica Negociável (N). Os detalhes podem ser definidos posteriormente de maneira verificável nos critérios de aceite.
+
+### História #2
+
+**O que a IA sugeriu:** utilizar a expressão "rapidamente" para representar a necessidade da ONG de encontrar doações em tempo hábil.
+
+**O que o grupo mudou:** identificamos que "rapidamente" não possui uma medida objetiva e decidimos que o tempo esperado deve ser definido nos critérios de aceite.
+
+**Por quê:** a expressão prejudica a Testabilidade (T), pois pessoas diferentes poderiam interpretar "rapidamente" de maneiras diferentes.
+
+### História #3 — marcada como ★ História 0
+
+**O que a IA sugeriu:** remover a história de aceite porque ela depende da existência de uma doação previamente publicada e, portanto, não seria totalmente Independente (I).
+
+**O que o grupo mudou:** rejeitamos a sugestão de remoção e mantivemos a história, tornando sua dependência explícita.
+
+**Por quê:** o aceite exerce uma regra central do negócio, pois uma doação aceita não pode continuar disponível para outra ONG. Além disso, essa fatia permite registrar os instantes da publicação e do aceite para iniciar a medição do tempo do processo.
+
+### Regra inventada identificada
+
+Durante a revisão, foi considerada a possibilidade de uma doação aceita voltar automaticamente a ficar disponível caso a ONG não realize a retirada dentro do prazo.
+
+Essa regra não está definida no caso e, portanto, não foi assumida como requisito. Ela foi registrada como uma regra ausente. A decisão sobre o comportamento correto deve ser tomada por Marta, como coordenadora da operação, em conjunto com as organizações participantes do piloto.
+
+### Restrições preservadas após a revisão
+
+A revisão também identificou o risco de gerar histórias genéricas e deixar de considerar restrições específicas do caso. Por isso, o grupo manteve explícitas as condições relevantes para o projeto, principalmente o uso pelo celular com conexão instável pelos motoristas voluntários. As demais restrições do piloto, como orçamento próximo de zero, ausência de integração com sistemas dos restaurantes e execução inicial em apenas um bairro, continuam sendo consideradas como limites da solução, mesmo quando não aparecem diretamente em todas as histórias.
