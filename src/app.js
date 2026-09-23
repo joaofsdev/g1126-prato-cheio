@@ -56,10 +56,8 @@ export function criarApp() {
         });
       }
 
-      const doacaoAceita = await doacoes.aceitar(
-        id,
-        req.body?.ong ?? 'ONG'
-      );
+      // Sem valor padrão: a ONG precisa ser informada (critério 0.3).
+      const doacaoAceita = await doacoes.aceitar(id, req.body?.ong);
 
       res.json(doacaoAceita);
     })
@@ -80,19 +78,22 @@ export function criarApp() {
 
     // Identifica erros conhecidos das regras de negócio.
     const erroDeValidacao =
-      /^(Dados obrigatórios|ONG é obrigatória|Doação já foi aceita)/
-        .test(mensagem);
+      /^(Dados obrigatórios|ONG é obrigatória)/.test(mensagem);
+    const erroDeConflito = /^Doação já foi aceita/.test(mensagem);
 
     // Define o código HTTP correspondente ao erro.
+    // 404: não existe · 409: já aceita por outra ONG (Regra 2) · 400: dados inválidos
     const status = mensagem === 'Doação não encontrada'
       ? 404
-      : erroDeValidacao
-        ? 400
-        : Number.isInteger(erro.status) &&
-            erro.status >= 400 &&
-            erro.status < 500
-          ? erro.status
-          : 500;
+      : erroDeConflito
+        ? 409
+        : erroDeValidacao
+          ? 400
+          : Number.isInteger(erro.status) &&
+              erro.status >= 400 &&
+              erro.status < 500
+            ? erro.status
+            : 500;
 
     // Registra erros internos no terminal.
     if (status === 500) {

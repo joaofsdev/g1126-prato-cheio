@@ -2,7 +2,7 @@ import * as repositorio from './repositorio.js';
 
 /**
  * Valida os dados obrigatórios de uma doação.
- * @param {{tipo?: string, quantidade?: number, validade?: string}} dados
+ * @param {{tipo?: string, quantidade?: string|number, validade?: string}} dados
  * @throws {Error} Se algum dado obrigatório estiver ausente ou inválido.
  */
 function validarDadosDoacao(dados) {
@@ -11,23 +11,31 @@ function validarDadosDoacao(dados) {
   if (!tipo || typeof tipo !== 'string' || !tipo.trim()) {
     throw new Error('Dados obrigatórios ausentes: tipo');
   }
-  if (quantidade === undefined || quantidade === null || Number(quantidade) <= 0) {
+  // Quantidade é texto livre ("10 porções", "5 kg"). Se começar com um número,
+  // esse número precisa ser maior que zero ("0 kg" e "-3 kg" são recusados).
+  const textoQuantidade = String(quantidade ?? '').trim();
+  const numeroInicial = Number.parseFloat(textoQuantidade.replace(',', '.'));
+  if (!textoQuantidade || (!Number.isNaN(numeroInicial) && numeroInicial <= 0)) {
     throw new Error('Dados obrigatórios ausentes ou inválidos: quantidade');
   }
-  if (!validade) {
+  if (!validade || typeof validade !== 'string' || !validade.trim()) {
     throw new Error('Dados obrigatórios ausentes: validade');
   }
 }
 
 /**
  * Cria uma nova doação disponível.
- * @param {{tipo: string, quantidade: number, validade: string}} dados
+ * @param {{tipo: string, quantidade: string|number, validade: string}} dados
  * @returns {Promise<object>} A doação criada.
  */
 export async function criarDoacao(dados) {
   validarDadosDoacao(dados);
   const { tipo, quantidade, validade } = dados;
-  return repositorio.inserir({ tipo: tipo.trim(), quantidade, validade });
+  return repositorio.inserir({
+    tipo: tipo.trim(),
+    quantidade: String(quantidade).trim(),
+    validade: validade.trim()
+  });
 }
 
 /**
@@ -59,10 +67,11 @@ export async function aceitar(id, ong) {
     throw new Error('Doação não encontrada');
   }
 
-  const aceita = await repositorio.marcarComoAceita(id, ong);
+  const aceita = await repositorio.marcarComoAceita(id, ong.trim());
   if (!aceita) {
     throw new Error('Doação já foi aceita por outra ONG');
   }
 
-  return { ...doacao, status: 'aceita', ong };
+  // Relê do banco para devolver o registro real, incluindo aceita_em.
+  return repositorio.buscarPorId(id);
 }

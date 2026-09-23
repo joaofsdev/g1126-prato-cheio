@@ -13,6 +13,7 @@
     button { margin-top: .8rem; cursor: pointer; }
     li { border: 1px solid #ddd; border-radius: .5rem; padding: .6rem; margin-bottom: .5rem; list-style: none; }
     ul { padding: 0; }
+    .erro { color: #b00020; min-height: 1.2rem; margin: .5rem 0 0; font-size: .9rem; }
   </style>
 </head>
 <body>
@@ -27,16 +28,48 @@
     <label for="validade">Validade / retirar até</label>
     <input id="validade" type="date">
     <button id="publicar">Publicar</button>
+    <p id="erro-publicar" class="erro" role="alert"></p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Sou uma ONG</legend>
+    <label for="ong">Nome da ONG (usado ao aceitar)</label>
+    <input id="ong" placeholder="Ex.: ONG Esperança">
   </fieldset>
 
   <h2>Doações disponíveis</h2>
+  <p id="erro-aceitar" class="erro" role="alert"></p>
   <ul id="lista"></ul>
 
   <script>
+    // Envia a requisição e devolve { ok, corpo }, para a tela poder mostrar o erro da API.
+    async function enviar(url, dados) {
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dados)
+        });
+        const corpo = await res.json().catch(() => ({}));
+        return { ok: res.ok, corpo };
+      } catch {
+        return { ok: false, corpo: { erro: 'Sem conexão com o servidor. Tente de novo.' } };
+      }
+    }
+
+    function mostrarErro(id, mensagem) {
+      document.getElementById(id).textContent = mensagem ?? '';
+    }
+
     async function carregar() {
-      const res = await fetch('/api/doacoes');
-      const doacoes = await res.json();
       const lista = document.getElementById('lista');
+      let doacoes;
+      try {
+        doacoes = await (await fetch('/api/doacoes')).json();
+      } catch {
+        lista.innerHTML = '<li>Não foi possível carregar as doações.</li>';
+        return;
+      }
       lista.innerHTML = doacoes.length
         ? ''
         : '<li>Nenhuma doação disponível.</li>';
@@ -46,11 +79,15 @@
         const botao = document.createElement('button');
         botao.textContent = 'Aceitar';
         botao.onclick = async () => {
-          await fetch(`/api/doacoes/${d.id}/aceitar`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ong: 'Minha ONG' })
-          });
+          mostrarErro('erro-aceitar', '');
+          const ong = document.getElementById('ong').value.trim();
+          if (!ong) {
+            mostrarErro('erro-aceitar', 'Informe o nome da ONG antes de aceitar.');
+            document.getElementById('ong').focus();
+            return;
+          }
+          const { ok, corpo } = await enviar(`/api/doacoes/${d.id}/aceitar`, { ong });
+          if (!ok) mostrarErro('erro-aceitar', corpo.erro ?? 'Não foi possível aceitar.');
           carregar();
         };
         li.appendChild(botao);
@@ -59,15 +96,17 @@
     }
 
     document.getElementById('publicar').onclick = async () => {
-      await fetch('/api/doacoes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo: document.getElementById('tipo').value,
-          quantidade: document.getElementById('quantidade').value,
-          validade: document.getElementById('validade').value
-        })
-      });
+      mostrarErro('erro-publicar', '');
+      const campos = ['tipo', 'quantidade', 'validade'];
+      const dados = Object.fromEntries(
+        campos.map((c) => [c, document.getElementById(c).value])
+      );
+      const { ok, corpo } = await enviar('/api/doacoes', dados);
+      if (!ok) {
+        mostrarErro('erro-publicar', corpo.erro ?? 'Não foi possível publicar.');
+        return;
+      }
+      campos.forEach((c) => { document.getElementById(c).value = ''; });
       carregar();
     };
 

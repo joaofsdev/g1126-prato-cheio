@@ -1,6 +1,8 @@
 import { query } from './db.js';
 
-const COLUNAS = 'id, tipo, quantidade, validade, status, ong';
+// criada_em e aceita_em permitem medir o tempo entre a publicação e o aceite
+// (hipótese e experimento em docs/analise.md).
+const COLUNAS = 'id, tipo, quantidade, validade, status, ong, criada_em, aceita_em';
 
 export async function inserir({ tipo, quantidade, validade }) {
   const { rows } = await query(
@@ -26,9 +28,13 @@ export async function buscarPorId(id) {
   return rows[0];
 }
 
+// UPDATE atômico: só altera se a doação ainda estiver disponível.
+// Se nenhuma linha for alterada, outra ONG aceitou antes (Regra 2).
 export async function marcarComoAceita(id, ong) {
   const { alteradas } = await query(
-    `UPDATE doacoes SET status = 'aceita', ong = ? WHERE id = ? AND status = 'disponivel'`,
+    `UPDATE doacoes
+        SET status = 'aceita', ong = ?, aceita_em = datetime('now')
+      WHERE id = ? AND status = 'disponivel'`,
     [ong, id]
   );
   return alteradas > 0;

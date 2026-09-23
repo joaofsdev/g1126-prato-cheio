@@ -1,6 +1,6 @@
-Documento de Análise — Prato Cheio
+# Documento de Análise — Prato Cheio
 
-Trabalho 1 · máximo 4 páginas · entrega na Aula 5
+*Trabalho 1 · máximo 4 páginas · entrega na Aula 5*
 
 ## Pedido do cliente e reformulação do problema
 
@@ -18,7 +18,7 @@ Restaurantes, supermercados e outros doadores possuem alimentos próprios para c
 
 Portanto, o problema a ser resolvido não é "criar um aplicativo", mas reduzir a dificuldade e o tempo necessários para conectar alimentos excedentes a organizações capazes de aproveitá-los.
 
-Problema central
+### Problema central
 
 No Brasil, toneladas de alimentos em bom estado são descartadas diariamente por restaurantes, supermercados e produtores, enquanto ONGs e comunidades enfrentam insegurança alimentar. A dificuldade está na conexão rápida e confiável entre quem tem excedente e quem pode aproveitá-lo: o alimento é perecível e a janela de oportunidade é curta.
 
@@ -71,10 +71,15 @@ Essa restrição exige que a solução controle o estado da doação e impeça u
 
 \* **Stakeholder adicional identificado pelo grupo:** a comunidade e as pessoas beneficiadas não são apresentadas no caso como participantes diretos da operação do sistema, mas são diretamente afetadas pelo resultado do projeto, pois o aproveitamento das doações pode aumentar a quantidade de alimentos e refeições disponibilizados pelas organizações.
 
-Objetivos de impacto
-Reduzir o tempo entre a disponibilidade de alimento excedente e sua destinação a quem precisa.
-Dar visibilidade às doações disponíveis em tempo real.
-Garantir que cada doação seja aceita por no máximo uma ONG (evitar conflito de retirada).
+### Mapa de stakeholders
+
+<img width="600" alt="Mapa de stakeholders em círculos concêntricos" src="https://github.com/user-attachments/assets/9657bf71-c3f4-4c43-b8bb-35712d838cdb" />
+
+### Objetivos de impacto
+
+- Reduzir o tempo entre a disponibilidade de alimento excedente e sua destinação a quem precisa.
+- Dar visibilidade às doações disponíveis em tempo real.
+- Garantir que cada doação seja aceita por no máximo uma ONG (evitar conflito de retirada).
 
 ## Regras de negócio
 
@@ -130,8 +135,7 @@ Garantir que cada doação seja aceita por no máximo uma ONG (evitar conflito d
 |---|---|---|---|
 | 1 | Como doador, quero publicar uma doação informando os dados essenciais do alimento, para reduzir a chance de alimentos próprios para consumo serem descartados. | N — Negociável: a história já determina quais dados devem ser informados. | Mover os detalhes dos campos obrigatórios para os critérios de aceite e manter na história apenas o comportamento percebido pelo doador. |
 | 2 | Como ONG, quero visualizar as doações disponíveis, para identificar rapidamente alimentos que possam ser retirados antes de perderem a validade. | T — Testável: “rapidamente” não possui uma medida objetiva. | Definir nos critérios de aceite uma condição mensurável para disponibilidade e tempo de resposta da consulta. |
-| ★ História 0 | Como ONG, quero aceitar uma doação disponível, para garantir sua retirada e evitar que o alimento seja desperdiçado. | I — Independente: depende da existência de uma doação previamente publicada. | Manter a dependência explícita e organizar o fluxo para que publicação e aceite formem uma fatia vertical executável. |
-
+| 3 ★ História 0 | Como ONG, quero aceitar uma doação disponível, para garantir sua retirada e evitar que o alimento seja desperdiçado. | I — Independente: depende da existência de uma doação previamente publicada. | Manter a dependência explícita e organizar o fluxo para que publicação e aceite formem uma fatia vertical executável. |
 | 4 | Como motorista voluntário, quero confirmar a coleta pelo celular, para registrar a retirada mesmo durante meus deslocamentos. | T — Testável: a história não define como verificar o comportamento em uma conexão instável. | Levar para os critérios de aceite a condição de uso em celular e conexão instável, com ambiente e medida verificáveis. |
 | 5 | Como Vigilância Sanitária, quero que as doações mantenham informações mínimas de rastreabilidade, para possibilitar a identificação do alimento doado quando necessário. | N — Negociável: definir campos específicos diretamente na história reduziria a possibilidade de negociação. | Manter a história focada na necessidade de rastreabilidade e definir os dados mínimos nos critérios de aceite conforme as regras do negócio. |
 | 6 | Como ONG, quero visualizar doações disponíveis que ainda estejam dentro da janela de retirada, para escolher uma opção que possa ser coletada a tempo. | P — Pequena: esta linha é uma fatia derivada de uma história gigante. | Isolar apenas o caminho de descoberta das doações disponíveis, sem incluir aceite ou retirada. |
@@ -144,45 +148,68 @@ Garantir que cada doação seja aceita por no máximo uma ONG (evitar conflito d
 
 **Por quê:** esses itens aumentariam o escopo da primeira entrega sem reduzir o principal risco que queremos validar agora. A História 0 deve permanecer pequena, mas suficiente para testar a regra central de exclusividade do aceite e começar a produzir a medição de tempo que ainda não existe.
 
-Critérios de aceite
+## Critérios de aceite
 
-História 0.1 — Publicar doação
+Cada critério tem um código (ex.: `0.1a`) que aparece no nome do teste correspondente em `tests/doacoes.test.js`.
 
-Dado que o doador informa tipo, quantidade e validade válidos, quando ele publica, então a doação é criada com status disponivel.
-Dado que algum campo obrigatório está ausente, quando ele tenta publicar, então o sistema recusa com erro.
+### História 0.1 — Publicar doação
 
-História 0.2 — Listar disponíveis
+- **0.1a** — Dado que o doador informa tipo, quantidade e validade válidos, quando ele publica, então a doação é criada com status `disponivel` e o instante da publicação (`criada_em`) é registrado.
+- **0.1b** — Dado que algum campo obrigatório está ausente (ou a quantidade é zero), quando ele tenta publicar, então o sistema recusa com erro e nada é gravado.
 
-Dado que existem doações publicadas e nenhuma foi aceita, quando uma ONG consulta, então todas aparecem.
-Dado que uma doação foi aceita, quando uma ONG consulta, então ela não aparece na lista.
+### História 0.2 — Listar disponíveis
 
-História 0.3 — Aceitar doação
+- **0.2a** — Dado que existem doações publicadas e nenhuma foi aceita, quando uma ONG consulta, então todas aparecem.
+- **0.2b** — Dado que uma doação foi aceita, quando uma ONG consulta, então ela não aparece na lista.
 
-Dado que a doação está disponível, quando a ONG aceita, então o status muda para aceita com o nome da ONG registrado.
-Dado que a doação já foi aceita por outra ONG, quando uma segunda ONG tenta aceitar, então o sistema recusa.
-Riscos
-Risco	Probabilidade	Impacto	Mitigação concreta
-Condição de corrida no aceite: duas ONGs enviam POST /api/doacoes/:id/aceitar quase ao mesmo tempo; a implementação original fazia ler status → checar → gravar em passos separados, então ambas podiam passar pela checagem antes de qualquer uma gravar.	Média (aumenta com o uso real, em produção)	Alto — duas ONGs se deslocam para retirar o mesmo lote	Implementado. marcarComoAceita agora faz um UPDATE atômico (UPDATE doacoes SET status='aceita', ong=? WHERE id=? AND status='disponivel') e checa alteradas (linhas afetadas): se zero, a doação já foi aceita e o sistema recusa. Coberto pelo teste "quando duas ONGs tentam aceitar ao mesmo tempo, só uma consegue" (tests/doacoes.test.js).
-Doação vencida continua visível: listarDisponiveis() não filtra por validade, então uma ONG pode ver e tentar aceitar um alimento já impróprio para consumo.	Média	Alto — risco de segurança alimentar (envolve o regulador, Anvisa)	Adicionar filtro WHERE status = 'disponivel' AND validade >= date('now') na consulta, e um teste que publica uma doação com validade no passado e confirma que ela não aparece na listagem.
-Falta de autenticação permite que qualquer pessoa aceite em nome de qualquer ONG	Alta (é o comportamento atual)	Médio	Aceito como limitação documentada da U1 (escopo do walking skeleton); autenticação simples por token de ONG entra no backlog da U2, registrada como decisão a revisitar no ADR.
-Hipótese e experimento
+### História 0.3 — Aceitar doação
 
-Suposição do caso: "As ONGs conseguirão buscar o alimento no tempo da validade informada?" (ver Incertezas, acima) — hoje isso é uma crença não testada da equipe, não um fato verificado.
+- **0.3a** — Dado que a doação está disponível, quando a ONG aceita informando seu nome, então o status muda para `aceita` com o nome da ONG e o instante do aceite (`aceita_em`) registrados. Sem o nome da ONG, o aceite é recusado.
+- **0.3b** — Dado que a doação já foi aceita por outra ONG, quando uma segunda ONG tenta aceitar, então o sistema recusa (HTTP 409) e mantém o primeiro aceite — inclusive quando os dois pedidos chegam ao mesmo tempo.
 
-Hipótese testável: Se uma doação for publicada com pelo menos 2 horas de antecedência em relação ao horário de validade/coleta, então pelo menos 70% das doações publicadas serão aceitas por uma ONG antes de vencer.
+## Riscos
 
-Experimento:
+| Risco | Probabilidade | Impacto | Mitigação concreta |
+|---|---|---|---|
+| Condição de corrida no aceite: duas ONGs enviam POST /api/doacoes/:id/aceitar quase ao mesmo tempo; a implementação original fazia ler status → checar → gravar em passos separados, então ambas podiam passar pela checagem antes de qualquer uma gravar. | Média (aumenta com o uso real, em produção) | Alto — duas ONGs se deslocam para retirar o mesmo lote | Implementado. marcarComoAceita agora faz um UPDATE atômico (`UPDATE doacoes SET status='aceita', ong=?, aceita_em=datetime('now') WHERE id=? AND status='disponivel'`) e checa alteradas (linhas afetadas): se zero, a doação já foi aceita e o sistema recusa com HTTP 409. Coberto pelo teste "quando duas ONGs tentam aceitar ao mesmo tempo, só uma consegue" (tests/doacoes.test.js). |
+| Doação vencida continua visível: listarDisponiveis() não filtra por validade, então uma ONG pode ver e tentar aceitar um alimento já impróprio para consumo. | Média | Alto — risco de segurança alimentar (envolve o regulador, Anvisa) | **Não implementado na História 0** (os critérios 0.1–0.3 não cobrem validade; é a Regra 1). Próximo passo: filtrar `WHERE status = 'disponivel' AND validade >= date('now')` em `listarDisponiveis()` e um teste que publica uma doação com validade no passado e confirma que ela não aparece. |
+| Falta de autenticação permite que qualquer pessoa aceite em nome de qualquer ONG | Alta (é o comportamento atual) | Médio | Aceito como limitação documentada da U1 (escopo do walking skeleton); autenticação simples por token de ONG entra no backlog da U2, registrada como decisão a revisitar no ADR. Na U1 o nome da ONG é obrigatório no aceite (critério 0.3a), mas não é verificado. |
 
-Método: piloto controlado de 2 semanas com doadores e ONGs reais (parceiros já conhecidos pela equipe, ex. 2-3 restaurantes e 2-3 ONGs), usando o sistema em produção (Unidade 1/2).
-Métricas coletadas: (1) % de doações aceitas antes da validade; (2) tempo mediano entre criada_em e o aceite; (3) nº de doações que expiraram sem aceite.
-Como medir: consulta simples ao banco comparando criada_em, horário do aceite e validade de cada registro — não exige instrumentação nova, só os dados já persistidos pelo schema atual.
-Critério de sucesso: ≥ 70% de doações aceitas antes do vencimento confirma a hipótese e valida seguir investindo no fluxo atual sem mudanças estruturais.
-Critério de falha: < 50% indica que o problema não é só "ter um canal digital" — pode ser necessário adicionar notificações push/WhatsApp para ONGs (mudança de escopo a ser registrada em ADR na U2).
-Decisão de análise
-Problema: Falta de canal rápido entre doadores de alimentos e ONGs receptoras.
-Alternativas: (1) Formulário via Google Forms — simples mas sem integração, sem atualização de status. (2) App mobile nativo — poderoso mas custo alto para MVP. (3) API REST com frontend leve — equilíbrio entre simplicidade e funcionalidade.
-Decisão e justificativa: API REST + página web estática. Permite validar o fluxo ponta a ponta com o mínimo de infraestrutura e possibilita evolução incremental.
-Riscos e limitações: Sem autenticação na U1; sem notificações; sem controle de validade automático.
+## Hipótese e experimento
+
+**Suposição do caso:** "As ONGs conseguirão buscar o alimento no tempo da validade informada?" (ver Incertezas, acima) — hoje isso é uma crença não testada da equipe, não um fato verificado.
+
+**Hipótese testável:** Se uma doação for publicada com pelo menos 2 horas de antecedência em relação ao horário de validade/coleta, então pelo menos 70% das doações publicadas serão aceitas por uma ONG antes de vencer.
+
+**Experimento:**
+
+- **Método:** piloto controlado de 2 semanas com doadores e ONGs reais (parceiros já conhecidos pela equipe, ex. 2-3 restaurantes e 2-3 ONGs), usando o sistema em produção (Unidade 1/2).
+- **Métricas coletadas:** (1) % de doações aceitas antes da validade; (2) tempo mediano entre `criada_em` e `aceita_em`; (3) nº de doações que expiraram sem aceite.
+- **Como medir:** consulta simples ao banco comparando `criada_em`, `aceita_em` e `validade` de cada registro. Os dois instantes já são gravados pela História 0 (colunas do schema em `src/db.js`), então o experimento não exige instrumentação nova.
+- **Critério de sucesso:** ≥ 70% de doações aceitas antes do vencimento confirma a hipótese e valida seguir investindo no fluxo atual sem mudanças estruturais.
+- **Critério de falha:** < 50% indica que o problema não é só "ter um canal digital" — pode ser necessário adicionar notificações push/WhatsApp para ONGs (mudança de escopo a ser registrada em ADR na U2).
+
+## Decisão de análise
+
+- **Problema:** Falta de canal rápido entre doadores de alimentos e ONGs receptoras.
+- **Alternativas:** (1) Formulário via Google Forms — simples mas sem integração, sem atualização de status. (2) App mobile nativo — poderoso mas custo alto para MVP. (3) API REST com frontend leve — equilíbrio entre simplicidade e funcionalidade.
+- **Decisão e justificativa:** API REST + página web estática. Permite validar o fluxo ponta a ponta com o mínimo de infraestrutura e possibilita evolução incremental.
+- **Riscos e limitações:** Sem autenticação na U1; sem notificações; sem controle de validade automático (Regra 1 fica para a próxima iteração — ver Riscos); sem decisão sobre a ONG que aceita e não retira (Regra 3, regra ausente).
+
+## Rastreabilidade
+
+Como o que foi implementado se liga às histórias, regras e critérios. Os testes estão em `tests/doacoes.test.js` e citam o código do critério no nome.
+
+| Critério | História / regra | Onde está implementado | Teste(s) |
+|---|---|---|---|
+| 0.1a — publica com status `disponivel` e registra `criada_em` | História 1 · conflito (dados mínimos) | `POST /api/doacoes` → `criarDoacao` → `repositorio.inserir` | `[0.1a] cria a doação com status disponivel…` |
+| 0.1b — recusa sem campo obrigatório | Conflito doador x Vigilância (dados mínimos obrigatórios) · História 5 | `validarDadosDoacao` em `src/doacoes.js` | `[0.1b] recusa doação sem tipo / quantidade / validade`, `recusa quantidade zero`, `não grava nada…` |
+| 0.2a — todas as disponíveis aparecem | História 2 | `GET /api/doacoes` → `listarDisponiveis` | `[0.2a] mostra todas as doações publicadas…` |
+| 0.2b — aceita some da lista | Regra 2 | `WHERE status = 'disponivel'` em `repositorio.listarDisponiveis` | `[0.2b] a doação aceita sai da lista…` |
+| 0.3a — aceita com ONG e `aceita_em` | ★ História 0 · hipótese (medição de tempo) | `POST /api/doacoes/:id/aceitar` → `aceitar` → `marcarComoAceita` | `[0.3a] muda o status para aceita…`, `[0.3a] recusa o aceite quando a ONG não é informada` |
+| 0.3b — segundo aceite recusado | Regra 2 · restrição de negócio · risco de condição de corrida | `UPDATE … WHERE status = 'disponivel'` atômico; HTTP 409 | `[0.3b] recusa aceitar…`, `mantém o primeiro aceite…`, `duas ONGs ao mesmo tempo…` |
+
+**Fora da História 0 (não implementado, de propósito):** Regra 1 (doação vencida), Regra 3 (regra ausente — aguarda decisão da Marta), histórias 4 e 8 (motorista voluntário) e autenticação.
 
 ## Uso de IA
 

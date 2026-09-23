@@ -41,9 +41,17 @@ export async function migrar() {
       validade    TEXT NOT NULL,
       status      TEXT NOT NULL DEFAULT 'disponivel',
       ong         TEXT,
-      criada_em   TEXT NOT NULL DEFAULT (datetime('now'))
+      criada_em   TEXT NOT NULL DEFAULT (datetime('now')),
+      aceita_em   TEXT
     )
   `);
+
+  // Bancos criados antes de existir a coluna aceita_em recebem a coluna aqui,
+  // sem precisar apagar o arquivo dados.sqlite.
+  const colunas = conexao().prepare('PRAGMA table_info(doacoes)').all();
+  if (!colunas.some((c) => c.name === 'aceita_em')) {
+    conexao().exec('ALTER TABLE doacoes ADD COLUMN aceita_em TEXT');
+  }
 }
 
 /** Apaga todos os dados. Usado pelos testes. */
