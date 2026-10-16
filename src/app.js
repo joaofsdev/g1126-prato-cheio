@@ -42,7 +42,17 @@ export function criarApp({ db = dbPadrao() } = {}) {
   const doacoes = criarServicoDoacoes(criarRepositorio(db));
   const app = express();
 
-  // Permite receber dados JSON com limite de tamanho.
+  // Segurança: não anuncia a tecnologia do servidor (cabeçalho X-Powered-By: Express).
+  app.disable('x-powered-by');
+
+  // Segurança: o navegador não deve "adivinhar" o tipo do conteúdo (evita que um
+  // JSON seja interpretado como HTML/script).
+  app.use((req, res, next) => {
+    res.set('X-Content-Type-Options', 'nosniff');
+    next();
+  });
+
+  // Permite receber dados JSON com limite de tamanho (acima disso: 413).
   app.use(express.json({ limit: '100kb' }));
 
   // Disponibiliza os arquivos da interface.
