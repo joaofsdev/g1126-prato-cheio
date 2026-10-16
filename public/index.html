@@ -38,6 +38,7 @@
   </fieldset>
 
   <h2>Doações disponíveis</h2>
+  <p>Doações vencidas não aparecem aqui.</p>
   <p id="erro-aceitar" class="erro" role="alert"></p>
   <ul id="lista"></ul>
 
@@ -94,6 +95,9 @@
         lista.appendChild(li);
       }
     }
+
+    // Regra 1: o calendário não oferece datas que já passaram (a API também recusa).
+    document.getElementById('validade').min = new Date().toLocaleDateString('en-CA');
 
     document.getElementById('publicar').onclick = async () => {
       mostrarErro('erro-publicar', '');
