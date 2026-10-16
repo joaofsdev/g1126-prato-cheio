@@ -16,49 +16,84 @@ Conecta doadores de alimentos excedentes a ONGs, antes que a comida se perca.
 
 ## Como rodar
 
-Requisito: **Node.js 22.13 ou superior**. Mais nada — o banco da Unidade 1 é SQLite, embutido no próprio Node.
+Requisitos: **Node.js 22.13 ou superior** e **Docker** (com Docker Compose) para o PostgreSQL.
 
 > Esta é a **stack preferencial** da disciplina. Se o seu grupo optar por outra, registre o ADR de justificativa e garanta os mesmos compromissos: repositório público com CI verde, rota de saúde, testes por um comando, os três comandos documentados aqui no README e banco relacional migrado para PostgreSQL na Unidade 3.
 
 ```bash
-npm install       # só na primeira vez
-npm run db:migrar # cria o schema (arquivo dados.sqlite)
-npm start         # sobe em http://localhost:3000
-npm test          # roda os testes
-npm run dev       # sobe recarregando a cada alteração
+npm install            # só na primeira vez
+cp .env.example .env   # só na primeira vez (no Windows: copy .env.example .env)
+docker compose up -d   # sobe o PostgreSQL de desenvolvimento (5432) e o de testes (5433)
+npm run db:migrar      # aplica as migrations de migrations/ no banco de DATABASE_URL
+npm start              # sobe em http://localhost:3000
+npm test               # roda os testes contra o PostgreSQL de testes
+npm run test:cobertura # testes + relatório de cobertura (texto no terminal e coverage/index.html)
+npm run dev            # sobe recarregando a cada alteração
 ```
 
-Os testes usam SQLite **em memória**, então não sujam o banco de desenvolvimento.
+`npm start`, `npm run dev` e `npm run db:migrar` leem o `.env` automaticamente. O servidor também
+aplica as migrations pendentes ao subir.
 
-> Ao rodar `npm test` o Node imprime `ExperimentalWarning: SQLite is an experimental feature`.
-> É esperado — o módulo embutido `node:sqlite` ainda é marcado como experimental. Não é erro e não reprova o CI.
+Os testes usam o banco **`db-teste`** (em memória no contêiner), então não sujam o banco de
+desenvolvimento. Para apontar os testes para outro PostgreSQL, defina `TEST_DATABASE_URL`.
 
-> **Atenção:** não deixe o repositório dentro de uma pasta sincronizada (OneDrive, Google Drive, Dropbox) nem em disco de rede. O SQLite precisa de trava de arquivo e nesses lugares falha com `disk I/O error`. Clone em uma pasta local comum, por exemplo `~/dev/`.
+> **Porta 5432 ocupada?** (outro PostgreSQL na máquina) Defina `DB_PORTA=5434` no `.env` e ajuste a
+> porta em `DATABASE_URL`. O mesmo vale para os testes com `DB_TESTE_PORTA` e `TEST_DATABASE_URL`.
 
-## O banco: SQLite agora, PostgreSQL depois
+### Variáveis de ambiente
+
+| Variável | Para que serve | Padrão |
+|---|---|---|
+| `DATABASE_URL` | banco usado pela aplicação | obrigatória (ver `.env.example`) |
+| `TEST_DATABASE_URL` | banco usado por `npm test` | `postgres://pratocheio:pratocheio@localhost:5433/pratocheio_teste` |
+| `PORT` | porta HTTP | `3000` |
+| `DB_PORTA` / `DB_TESTE_PORTA` | portas no host do `docker-compose.yml` | `5432` / `5433` |
+
+### Trouxe dados do SQLite da Unidade 1?
+
+```bash
+npm run db:migrar-dados-sqlite -- dados.sqlite
+```
+
+Copia as doações do arquivo SQLite para o PostgreSQL (banco vazio), preservando ids, status, ONG e
+os instantes de publicação e aceite. É tudo-ou-nada: se algo falhar, nada é gravado.
+
+## O banco: de SQLite para PostgreSQL
 
 | Unidade | Banco | O que precisa instalar |
 |---|---|---|
-| 1 — Análise | **SQLite** (`node:sqlite`, embutido) | nada além do Node |
+| 1 — Análise | SQLite (`node:sqlite`, embutido) | nada além do Node |
 | 2 — Projeto | SQLite | nada |
-| 3 — Construção | **PostgreSQL** (após refatorar) | um PostgreSQL acessível — o caminho é escolha do grupo |
+| 3 — Construção | **PostgreSQL 16** (atual) | Docker (`docker compose up -d`) |
 
-A troca não é acidente de percurso: na Unidade 2 vocês registram a decisão em um **ADR** (alternativas, consequências, riscos) e na Unidade 3 executam a **refatoração** — com os testes existentes provando que o comportamento se manteve.
+A decisão e os trade-offs estão no **[ADR 0002](docs/adr/0002-migracao-sqlite-para-postgresql.md)**.
+Em resumo:
 
-O `src/db.js` foi desenhado para isso: ele expõe `query()` devolvendo `{ rows }`, então a troca do banco fica contida nele e não vaza para as regras de negócio.
-
-**Como o PostgreSQL vai subir é decisão do grupo**, comparada no mesmo ADR: instalar o PostgreSQL na máquina, subir um contêiner, ou usar um serviço gerenciado gratuito (Neon, Supabase, Render). A disciplina não impõe o caminho — exige o banco alcançável por `DATABASE_URL`, o schema migrado e o CI verde. Cada opção tem custo e risco diferentes, e reconhecê-los é parte da decisão.
+- **Só `src/db.js` conhece o driver** (`pg`). O resto recebe um objeto `db` com
+  `query(sql, valores)` → `{ rows, alteradas }`, o mesmo contrato da Unidade 1 — os 16 testes que já
+  existiam passaram sem alteração depois da troca.
+- **Todo o SQL fica em `src/repositorio.js`**, com parâmetros `$1, $2…` (nada de concatenar valores).
+- **Schema versionado** em `migrations/` (`001_…sql`, `002_…sql`), aplicado por `src/migrar.js` e
+  registrado na tabela `schema_migrations`. Migration já integrada não se edita: mudança vira arquivo novo.
+- Diferenças de dialeto tratadas: `AUTOINCREMENT` → `GENERATED ALWAYS AS IDENTITY`, `TEXT` → `DATE` /
+  `TIMESTAMPTZ`, `datetime('now')` → `now()`, `?` → `$1`, fuso fixado em `America/Sao_Paulo`.
+- **Banco fora do ar → HTTP 503** com mensagem clara (`src/erros.js`), em vez de um 500 genérico.
 
 ## Estrutura
 
 ```
 src/server.js        entrypoint (npm start)
-src/db.js            conexão e schema do banco (pronto)
-src/app.js           rotas da API
-src/doacoes.js       regras de negócio      <- implementar (U1)
-src/repositorio.js   acesso ao banco (SQL)  <- implementar (U1)
+src/app.js           rotas da API e tratamento de erros
+src/doacoes.js       regras de negócio
+src/repositorio.js   acesso ao banco (todo o SQL)
+src/db.js            conexão com o PostgreSQL (único arquivo que conhece o driver)
+src/migrar.js        aplica as migrations pendentes
+src/erros.js         erros da aplicação com o status HTTP de cada um
+migrations/          schema versionado (.sql)
+scripts/             db:migrar e cópia de dados do SQLite
 public/index.html    interface (funciona no celular)
-tests/               testes automatizados
+tests/               testes automatizados (Vitest + supertest)
+docker-compose.yml   PostgreSQL de desenvolvimento e de testes
 docs/analise.md      documento de análise   (Trabalho 1)
 docs/projeto.md      documento de projeto   (Trabalho 2)
 docs/adr/            decisões arquiteturais (Trabalho 2)
@@ -66,7 +101,7 @@ docs/validacao.md    validação e testes     (Trabalho 3)
 docs/refatoracoes.md refatorações feitas    (Trabalho 3)
 docs/demo.md         roteiro da demo        (Trabalho 3)
 docs/retrospectivas/ retrospectiva de cada iteração
-.github/workflows/   pipeline de CI
+.github/workflows/   pipeline de CI (com PostgreSQL)
 ```
 
 ## Como trabalhar (fluxo de Pull Request)
@@ -99,11 +134,11 @@ Ele é a fonte oficial: se algo aqui divergir, vale o que está lá.
 | Rotas | `src/app.js` | `GET /api/saude`, `GET /api/doacoes`, `POST /api/doacoes`, `POST /api/doacoes/:id/aceitar` |
 | Regras | `src/doacoes.js` | valida os campos obrigatórios e exige a ONG no aceite |
 | SQL | `src/repositorio.js` | aceite com `UPDATE` atômico (impede dois aceites da mesma doação) |
-| Banco | `src/db.js` | schema com `criada_em` e `aceita_em` (medição do tempo até o aceite) |
+| Banco | `src/db.js` + `migrations/` | PostgreSQL; schema com `criada_em` e `aceita_em` (medição do tempo até o aceite) |
 | Testes | `tests/doacoes.test.js` | um teste por critério de aceite, marcado com o número do critério |
 
 Códigos de resposta: `201` publicada · `400` dados inválidos ou ONG ausente ·
-`404` doação inexistente · `409` doação já aceita por outra ONG.
+`404` doação inexistente · `409` doação já aceita por outra ONG · `503` banco fora do ar.
 
 **Falta (limites conhecidos da Unidade 1, registrados em `docs/analise.md`):**
 - doação vencida ainda aparece na lista (Regra 1 — fora da História 0, está nos riscos);

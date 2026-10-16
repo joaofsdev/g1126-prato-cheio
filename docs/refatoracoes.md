@@ -4,13 +4,22 @@
 
 ## Refatoração 1 — Migração de SQLite para PostgreSQL
 
-- **Motivo:** (o que a decidiu — ver o ADR da Unidade 2)
-- **O que mudou:** (arquivos e o que neles)
-- **O que NÃO mudou:** (as regras de negócio? as rotas? os testes?)
+- **Motivo:** exigência da Unidade 3, concorrência real no aceite (Regra 2) e tipos de data para a
+  Regra 1 — ver [ADR 0002](adr/0002-migracao-sqlite-para-postgresql.md).
+- **O que mudou:**
+  - `src/db.js`: pool do driver `pg` no lugar do `node:sqlite`; traduz falha de conexão em 503.
+  - `migrations/001_cria_tabela_doacoes.sql` + `src/migrar.js`: schema versionado (antes era
+    `CREATE TABLE` dentro do código).
+  - `src/repositorio.js`: marcadores `$1…`, `now()`; passa a receber o `db` por parâmetro.
+  - `src/doacoes.js` e `src/app.js`: erros tipados (`src/erros.js`) e injeção de dependência;
+    `validade` validada como data `AAAA-MM-DD`.
+  - `docker-compose.yml`, `.env.example`, `vitest.config.js`, CI com service do PostgreSQL.
+- **O que NÃO mudou:** as rotas, os códigos HTTP já existentes, as regras de negócio e o arquivo
+  `tests/doacoes.test.js` (nenhuma linha alterada).
 - **Evidência de que o comportamento se manteve:**
-  - testes antes da mudança: ___ passando
-  - testes depois da mudança: ___ passando
-  - link da execução do CI verde:
+  - testes antes da mudança (SQLite): **16 passando**
+  - testes depois da mudança (PostgreSQL): **os mesmos 16 passando**, + 11 novos da migração (27 no total)
+  - link da execução do CI verde: (preencher com o link do CI do PR de migração)
 
 ## Refatoração 2 — (nome)
 

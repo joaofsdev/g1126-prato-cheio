@@ -1,12 +1,19 @@
 
 import express from 'express';
 import { fileURLToPath } from 'node:url';
-import * as doacoes from './doacoes.js';
+import { dbPadrao } from './db.js';
+import { criarRepositorio } from './repositorio.js';
+import { criarServicoDoacoes } from './doacoes.js';
+import { ErroAplicacao } from './erros.js';
 
 // Define o caminho absoluto da pasta que contém a interface.
 const pastaPublica = fileURLToPath(
   new URL('../public/', import.meta.url)
 );
+
+// Maior valor da coluna INTEGER do PostgreSQL. Um id acima disso nem chega ao banco
+// (que recusaria com erro 500 "out of range").
+const MAIOR_ID = 2_147_483_647;
 
 // Encaminha erros de funções assíncronas ao middleware de erros.
 function rotaAssincrona(funcao) {
@@ -14,8 +21,15 @@ function rotaAssincrona(funcao) {
     Promise.resolve(funcao(req, res)).catch(next);
 }
 
-// Cria e configura a aplicação Express.
-export function criarApp() {
+/**
+ * Cria e configura a aplicação Express.
+ *
+ * Injeção de dependência: o banco é recebido por parâmetro. Em produção usa o banco
+ * de DATABASE_URL; nos testes dá para passar outro (ex.: um banco fora do ar).
+ * @param {{ db?: { query: Function } }} [dependencias]
+ */
+export function criarApp({ db = dbPadrao() } = {}) {
+  const doacoes = criarServicoDoacoes(criarRepositorio(db));
   const app = express();
 
   // Permite receber dados JSON com limite de tamanho.
@@ -50,7 +64,7 @@ export function criarApp() {
       const id = Number(req.params.id);
 
       // Verifica se o identificador informado é válido.
-      if (!Number.isSafeInteger(id) || id <= 0) {
+      if (!Number.isSafeInteger(id) || id <= 0 || id > MAIOR_ID) {
         return res.status(400).json({
           erro: 'ID de doação inválido.'
         });
@@ -71,41 +85,30 @@ export function criarApp() {
   });
 
   // Centraliza o tratamento de erros da aplicação.
+  // 400 dados inválidos · 404 não existe · 409 já aceita (Regra 2) · 503 banco fora do ar
+  // (ver src/erros.js) · 500 qualquer outro erro inesperado.
   app.use((erro, req, res, next) => {
     if (res.headersSent) return next(erro);
 
-    const mensagem = erro.message ?? '';
+    // Erros da aplicação (src/erros.js) e do express.json (400 JSON inválido,
+    // 413 corpo grande demais) já trazem o status HTTP.
+    const status = Number.isInteger(erro.status) && erro.status >= 400 && erro.status < 600
+      ? erro.status
+      : 500;
 
-    // Identifica erros conhecidos das regras de negócio.
-    const erroDeValidacao =
-      /^(Dados obrigatórios|ONG é obrigatória)/.test(mensagem);
-    const erroDeConflito = /^Doação já foi aceita/.test(mensagem);
-
-    // Define o código HTTP correspondente ao erro.
-    // 404: não existe · 409: já aceita por outra ONG (Regra 2) · 400: dados inválidos
-    const status = mensagem === 'Doação não encontrada'
-      ? 404
-      : erroDeConflito
-        ? 409
-        : erroDeValidacao
-          ? 400
-          : Number.isInteger(erro.status) &&
-              erro.status >= 400 &&
-              erro.status < 500
-            ? erro.status
-            : 500;
-
-    // Registra erros internos no terminal.
-    if (status === 500) {
-      console.error('Erro interno:', erro);
+    // Registra no terminal os erros do servidor, com a causa original.
+    if (status >= 500) {
+      console.error('Erro interno:', erro.cause ?? erro);
     }
 
-    // Define a mensagem que será enviada ao usuário.
-    const resposta = status === 500
-      ? 'Erro interno do servidor.'
-      : erro instanceof SyntaxError && status === 400
-        ? 'JSON inválido.'
-        : mensagem;
+    // Define a mensagem que será enviada ao usuário. Erros inesperados nunca expõem
+    // detalhes internos (SQL, nomes de tabelas, stack trace).
+    let resposta;
+    if (erro instanceof ErroAplicacao) resposta = erro.message;
+    else if (status >= 500) resposta = 'Erro interno do servidor.';
+    else if (erro.type === 'entity.parse.failed') resposta = 'JSON inválido.';
+    else if (erro.type === 'entity.too.large') resposta = 'Corpo da requisição muito grande.';
+    else resposta = 'Requisição inválida.';
 
     // Envia a resposta padronizada em JSON.
     res.status(status).json({

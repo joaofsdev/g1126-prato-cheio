@@ -1,64 +1,130 @@
-// Conexão com o banco. Já vem pronto — não precisa mexer agora.
+// Conexão com o PostgreSQL (driver `pg`).
 //
-// UNIDADE 1: SQLite, embutido no Node (módulo `node:sqlite`) — nada para instalar.
-// UNIDADE 3: este arquivo será refatorado para PostgreSQL. A interface abaixo
-//            (`query` devolvendo `{ rows }`) foi desenhada para que a troca fique
-//            contida aqui, sem espalhar mudança pelo resto do código.
-// `node:sqlite` é módulo embutido do Node 22+. Carregado via createRequire porque
-// algumas ferramentas (como o Vite/Vitest) ainda não o reconhecem como embutido.
-import { createRequire } from 'node:module';
-const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite');
+// Este é o único arquivo que conhece o driver. O resto do código recebe um objeto
+// `db` com `query(sql, valores)` devolvendo `{ rows, alteradas }` — o mesmo contrato
+// da versão SQLite da Unidade 1, por isso as regras de negócio não mudaram na migração.
+import pg from 'pg';
+import { ErroBancoIndisponivel } from './erros.js';
+import { aplicarMigrations } from './migrar.js';
 
-const ARQUIVO = process.env.DATABASE_FILE || 'dados.sqlite';
+// Colunas DATE (OID 1082) voltam como texto 'AAAA-MM-DD'. Sem isso o `pg` cria um
+// Date no fuso do servidor e '2026-12-01' pode virar '2026-11-30T03:00:00Z' no JSON.
+pg.types.setTypeParser(1082, (valor) => valor);
 
-let db;
+// Erros que significam "não deu para falar com o banco" (e não "o SQL está errado").
+// Códigos 08xxx = connection exception; 57P01/57P03 = banco desligando/iniciando.
+const CODIGOS_DE_CONEXAO = new Set(['ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ECONNRESET', '57P01', '57P03']);
 
-export function conexao() {
-  if (!db) db = new DatabaseSync(ARQUIVO);
-  return db;
+function ehFalhaDeConexao(erro) {
+  const codigo = String(erro.code ?? '');
+  return CODIGOS_DE_CONEXAO.has(codigo) ||
+    codigo.startsWith('08') ||
+    // O pg não põe `code` no timeout de conexão nem na conexão derrubada.
+    /timeout exceeded when trying to connect|Connection terminated/i.test(erro.message ?? '');
+}
+
+// Traduz falhas de conexão para ErroBancoIndisponivel (HTTP 503); o resto segue como está.
+function traduzirErro(erro) {
+  return ehFalhaDeConexao(erro) ? new ErroBancoIndisponivel(erro) : erro;
 }
 
 /**
- * Executa uma consulta e devolve { rows }.
- * Use `?` como marcador de parâmetro (evita injeção de SQL):
- *   query('SELECT * FROM doacoes WHERE id = ?', [id])
+ * Cria um acesso ao banco a partir de uma URL de conexão.
+ * O pool só é aberto na primeira consulta e pode ser reaberto depois de `encerrar()`.
+ * @param {string} [url] padrão: process.env.DATABASE_URL
+ * @param {{ connectionTimeoutMillis?: number }} [opcoes]
  */
-export async function query(sql, valores = []) {
-  const stmt = conexao().prepare(sql);
-  const ehLeitura = /^\s*(select|with)/i.test(sql) || /returning/i.test(sql);
-  if (ehLeitura) return { rows: stmt.all(...valores) };
-  const info = stmt.run(...valores);
-  return { rows: [], alteradas: info.changes };
-}
-
-/** Cria o schema, se ainda não existir. Rodado por `npm run db:migrar` e ao subir o servidor. */
-export async function migrar() {
-  conexao().exec(`
-    CREATE TABLE IF NOT EXISTS doacoes (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      tipo        TEXT NOT NULL,
-      quantidade  TEXT NOT NULL,
-      validade    TEXT NOT NULL,
-      status      TEXT NOT NULL DEFAULT 'disponivel',
-      ong         TEXT,
-      criada_em   TEXT NOT NULL DEFAULT (datetime('now')),
-      aceita_em   TEXT
-    )
-  `);
-
-  // Bancos criados antes de existir a coluna aceita_em recebem a coluna aqui,
-  // sem precisar apagar o arquivo dados.sqlite.
-  const colunas = conexao().prepare('PRAGMA table_info(doacoes)').all();
-  if (!colunas.some((c) => c.name === 'aceita_em')) {
-    conexao().exec('ALTER TABLE doacoes ADD COLUMN aceita_em TEXT');
+export function criarDb(url = process.env.DATABASE_URL, opcoes = {}) {
+  if (!url) {
+    throw new Error('DATABASE_URL não definida. Copie .env.example para .env (veja o README).');
   }
+
+  let pool = null;
+
+  function obterPool() {
+    if (!pool) {
+      pool = new pg.Pool({
+        connectionString: url,
+        connectionTimeoutMillis: opcoes.connectionTimeoutMillis ?? 5000,
+        // CURRENT_DATE e now() seguem o fuso da operação (Brasil), não o do servidor.
+        options: '-c timezone=America/Sao_Paulo'
+      });
+      // Uma conexão ociosa que cai (ex.: banco reiniciou) não pode derrubar o processo.
+      pool.on('error', (erro) => console.error('Conexão ociosa com o banco falhou:', erro.message));
+    }
+    return pool;
+  }
+
+  return {
+    /**
+     * Executa uma consulta parametrizada e devolve { rows, alteradas }.
+     * Use $1, $2… como marcadores (os valores nunca são concatenados no SQL):
+     *   query('SELECT * FROM doacoes WHERE id = $1', [id])
+     */
+    async query(sql, valores = []) {
+      try {
+        const resultado = await obterPool().query(sql, valores);
+        return { rows: resultado.rows, alteradas: resultado.rowCount };
+      } catch (erro) {
+        throw traduzirErro(erro);
+      }
+    },
+
+    /**
+     * Executa `funcao` numa transação: COMMIT se ela terminar, ROLLBACK se lançar erro.
+     * `funcao` recebe uma `query(sql, valores)` presa à mesma conexão.
+     */
+    async transacao(funcao) {
+      let cliente;
+      try {
+        cliente = await obterPool().connect();
+      } catch (erro) {
+        throw traduzirErro(erro);
+      }
+      try {
+        await cliente.query('BEGIN');
+        const resultado = await funcao(async (sql, valores = []) => {
+          const r = await cliente.query(sql, valores);
+          return { rows: r.rows, alteradas: r.rowCount };
+        });
+        await cliente.query('COMMIT');
+        return resultado;
+      } catch (erro) {
+        await cliente.query('ROLLBACK').catch(() => {});
+        throw traduzirErro(erro);
+      } finally {
+        cliente.release();
+      }
+    },
+
+    /** Fecha as conexões abertas. Uma consulta depois disso abre um pool novo. */
+    async encerrar() {
+      if (pool) {
+        const antigo = pool;
+        pool = null;
+        await antigo.end();
+      }
+    }
+  };
 }
 
-/** Apaga todos os dados. Usado pelos testes. */
+// Instância padrão (DATABASE_URL), criada só quando alguém precisa dela.
+let padrao;
+export function dbPadrao() {
+  if (!padrao) padrao = criarDb();
+  return padrao;
+}
+
+/** Aplica as migrations pendentes no banco padrão. Rodado ao subir o servidor e pelos testes. */
+export async function migrar() {
+  return aplicarMigrations(dbPadrao());
+}
+
+/** Apaga todos os dados e reinicia a numeração dos ids. Usado pelos testes. */
 export async function limparBanco() {
-  conexao().exec('DELETE FROM doacoes');
+  await dbPadrao().query('TRUNCATE doacoes RESTART IDENTITY');
 }
 
 export async function encerrar() {
-  if (db) { db.close(); db = undefined; }
+  if (padrao) await padrao.encerrar();
 }
