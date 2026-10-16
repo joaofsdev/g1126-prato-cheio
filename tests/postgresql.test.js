@@ -3,6 +3,7 @@ import request from 'supertest';
 import { criarApp } from '../src/app.js';
 import { criarDb, dbPadrao, migrar, limparBanco, encerrar } from '../src/db.js';
 import { aplicarMigrations } from '../src/migrar.js';
+import { daquiA } from './ajudantes.js';
 
 // Testes da migração SQLite -> PostgreSQL: diferenças de dialeto que a aplicação
 // precisa tratar e o comportamento quando o banco está fora do ar.
@@ -18,14 +19,15 @@ describe('Migração para PostgreSQL — tipos e dialeto', () => {
   afterAll(async () => { await encerrar(); });
 
   it('devolve a validade (DATE) como AAAA-MM-DD, sem deslocamento de fuso', async () => {
-    const res = await publicar({ tipo: 'Pão', quantidade: '20 unidades', validade: '2026-12-01' });
+    const validade = daquiA(1);
+    const res = await publicar({ tipo: 'Pão', quantidade: '20 unidades', validade });
 
     expect(res.status).toBe(201);
-    expect(res.body.validade).toBe('2026-12-01');
+    expect(res.body.validade).toBe(validade);
   });
 
   it('devolve criada_em (TIMESTAMPTZ) como instante ISO 8601', async () => {
-    const res = await publicar({ tipo: 'Pão', quantidade: '20 unidades', validade: '2026-12-01' });
+    const res = await publicar({ tipo: 'Pão', quantidade: '20 unidades', validade: daquiA(1) });
 
     expect(new Date(res.body.criada_em).toISOString()).toBe(res.body.criada_em);
   });
@@ -76,7 +78,7 @@ describe('Falha de banco', () => {
   it('responde 503 ao publicar quando o banco está fora do ar', async () => {
     const res = await request(appSemBanco)
       .post('/api/doacoes')
-      .send({ tipo: 'Sopa', quantidade: '10 porções', validade: '2026-12-01' });
+      .send({ tipo: 'Sopa', quantidade: '10 porções', validade: daquiA(1) });
 
     expect(res.status).toBe(503);
   });
