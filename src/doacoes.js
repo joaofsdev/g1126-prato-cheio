@@ -1,6 +1,17 @@
 import { ErroValidacao, ErroNaoEncontrado, ErroConflito } from './erros.js';
 import { hojeNaOperacao } from './datas.js';
 
+// Tamanho máximo dos textos livres. Sem limite, alguém poderia gravar até 100 kb
+// (o limite do corpo da requisição) num único campo.
+export const TAMANHO_MAXIMO = { tipo: 100, quantidade: 50, ong: 120 };
+
+/** @throws {ErroValidacao} se o texto passar do tamanho máximo do campo. */
+function exigirTamanhoMaximo(campo, texto) {
+  if (texto.length > TAMANHO_MAXIMO[campo]) {
+    throw new ErroValidacao(`Dados inválidos: ${campo} pode ter no máximo ${TAMANHO_MAXIMO[campo]} caracteres`);
+  }
+}
+
 /**
  * Diz se o texto é uma data real no formato AAAA-MM-DD (ex.: recusa 2026-02-30).
  * @param {string} texto
@@ -23,6 +34,7 @@ function validarDadosDoacao(dados) {
   if (!tipo || typeof tipo !== 'string' || !tipo.trim()) {
     throw new ErroValidacao('Dados obrigatórios ausentes: tipo');
   }
+  exigirTamanhoMaximo('tipo', tipo.trim());
   // Quantidade é texto livre ("10 porções", "5 kg"). Se começar com um número,
   // esse número precisa ser maior que zero ("0 kg" e "-3 kg" são recusados).
   const textoQuantidade = String(quantidade ?? '').trim();
@@ -30,6 +42,7 @@ function validarDadosDoacao(dados) {
   if (!textoQuantidade || (!Number.isNaN(numeroInicial) && numeroInicial <= 0)) {
     throw new ErroValidacao('Dados obrigatórios ausentes ou inválidos: quantidade');
   }
+  exigirTamanhoMaximo('quantidade', textoQuantidade);
   if (!validade || typeof validade !== 'string' || !validade.trim()) {
     throw new ErroValidacao('Dados obrigatórios ausentes: validade');
   }
@@ -102,6 +115,7 @@ export function criarServicoDoacoes(repositorio) {
     if (!ong || typeof ong !== 'string' || !ong.trim()) {
       throw new ErroValidacao('ONG é obrigatória para aceitar a doação');
     }
+    exigirTamanhoMaximo('ong', ong.trim());
 
     const doacao = await repositorio.buscarPorId(id);
     if (!doacao) {

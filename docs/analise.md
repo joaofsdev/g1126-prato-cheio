@@ -151,6 +151,7 @@ Essa restrição exige que a solução controle o estado da doação e impeça u
 ## Critérios de aceite
 
 Cada critério tem um código (ex.: `0.1a`) que aparece no nome do teste correspondente em `tests/doacoes.test.js`.
+Os critérios das histórias implementadas na Atividade 2 (5a–5d e 6a–6d) estão em `docs/projeto.md`.
 
 ### História 0.1 — Publicar doação
 
@@ -171,8 +172,8 @@ Cada critério tem um código (ex.: `0.1a`) que aparece no nome do teste corresp
 
 | Risco | Probabilidade | Impacto | Mitigação concreta |
 |---|---|---|---|
-| Condição de corrida no aceite: duas ONGs enviam POST /api/doacoes/:id/aceitar quase ao mesmo tempo; a implementação original fazia ler status → checar → gravar em passos separados, então ambas podiam passar pela checagem antes de qualquer uma gravar. | Média (aumenta com o uso real, em produção) | Alto — duas ONGs se deslocam para retirar o mesmo lote | Implementado. marcarComoAceita agora faz um UPDATE atômico (`UPDATE doacoes SET status='aceita', ong=?, aceita_em=datetime('now') WHERE id=? AND status='disponivel'`) e checa alteradas (linhas afetadas): se zero, a doação já foi aceita e o sistema recusa com HTTP 409. Coberto pelo teste "quando duas ONGs tentam aceitar ao mesmo tempo, só uma consegue" (tests/doacoes.test.js). |
-| Doação vencida continua visível: listarDisponiveis() não filtra por validade, então uma ONG pode ver e tentar aceitar um alimento já impróprio para consumo. | Média | Alto — risco de segurança alimentar (envolve o regulador, Anvisa) | **Não implementado na História 0** (os critérios 0.1–0.3 não cobrem validade; é a Regra 1). Próximo passo: filtrar `WHERE status = 'disponivel' AND validade >= date('now')` em `listarDisponiveis()` e um teste que publica uma doação com validade no passado e confirma que ela não aparece. |
+| Condição de corrida no aceite: duas ONGs enviam POST /api/doacoes/:id/aceitar quase ao mesmo tempo; a implementação original fazia ler status → checar → gravar em passos separados, então ambas podiam passar pela checagem antes de qualquer uma gravar. | Média (aumenta com o uso real, em produção) | Alto — duas ONGs se deslocam para retirar o mesmo lote | Implementado. marcarComoAceita agora faz um UPDATE atômico (`UPDATE doacoes SET status='aceita', ong=$1, aceita_em=now() WHERE id=$2 AND status='disponivel'` — sintaxe do PostgreSQL desde a Atividade 2) e checa alteradas (linhas afetadas): se zero, a doação já foi aceita e o sistema recusa com HTTP 409. Coberto pelo teste "quando duas ONGs tentam aceitar ao mesmo tempo, só uma consegue" (tests/doacoes.test.js). |
+| Doação vencida continua visível: listarDisponiveis() não filtra por validade, então uma ONG pode ver e tentar aceitar um alimento já impróprio para consumo. | Média | Alto — risco de segurança alimentar (envolve o regulador, Anvisa) | **Implementado na Atividade 2 (História 6).** `listarDisponiveis()` e o aceite filtram `validade >= CURRENT_DATE` (fuso de São Paulo) e a publicação recusa validade no passado. Coberto pelos testes `[6a]`–`[6d]` em `tests/vencidas.test.js`. |
 | Falta de autenticação permite que qualquer pessoa aceite em nome de qualquer ONG | Alta (é o comportamento atual) | Médio | Aceito como limitação documentada da U1 (escopo do walking skeleton); autenticação simples por token de ONG entra no backlog da U2, registrada como decisão a revisitar no ADR. Na U1 o nome da ONG é obrigatório no aceite (critério 0.3a), mas não é verificado. |
 
 ## Hipótese e experimento
@@ -185,7 +186,7 @@ Cada critério tem um código (ex.: `0.1a`) que aparece no nome do teste corresp
 
 - **Método:** piloto controlado de 2 semanas com doadores e ONGs reais (parceiros já conhecidos pela equipe, ex. 2-3 restaurantes e 2-3 ONGs), usando o sistema em produção (Unidade 1/2).
 - **Métricas coletadas:** (1) % de doações aceitas antes da validade; (2) tempo mediano entre `criada_em` e `aceita_em`; (3) nº de doações que expiraram sem aceite.
-- **Como medir:** consulta simples ao banco comparando `criada_em`, `aceita_em` e `validade` de cada registro. Os dois instantes já são gravados pela História 0 (colunas do schema em `src/db.js`), então o experimento não exige instrumentação nova.
+- **Como medir:** consulta simples ao banco comparando `criada_em`, `aceita_em` e `validade` de cada registro. Os dois instantes já são gravados pela História 0 (colunas do schema em `migrations/001_cria_tabela_doacoes.sql`), então o experimento não exige instrumentação nova.
 - **Critério de sucesso:** ≥ 70% de doações aceitas antes do vencimento confirma a hipótese e valida seguir investindo no fluxo atual sem mudanças estruturais.
 - **Critério de falha:** < 50% indica que o problema não é só "ter um canal digital" — pode ser necessário adicionar notificações push/WhatsApp para ONGs (mudança de escopo a ser registrada em ADR na U2).
 
@@ -208,8 +209,10 @@ Como o que foi implementado se liga às histórias, regras e critérios. Os test
 | 0.2b — aceita some da lista | Regra 2 | `WHERE status = 'disponivel'` em `repositorio.listarDisponiveis` | `[0.2b] a doação aceita sai da lista…` |
 | 0.3a — aceita com ONG e `aceita_em` | ★ História 0 · hipótese (medição de tempo) | `POST /api/doacoes/:id/aceitar` → `aceitar` → `marcarComoAceita` | `[0.3a] muda o status para aceita…`, `[0.3a] recusa o aceite quando a ONG não é informada` |
 | 0.3b — segundo aceite recusado | Regra 2 · restrição de negócio · risco de condição de corrida | `UPDATE … WHERE status = 'disponivel'` atômico; HTTP 409 | `[0.3b] recusa aceitar…`, `mantém o primeiro aceite…`, `duas ONGs ao mesmo tempo…` |
+| 5a–5d — consultar rastreio pelo id | História 5 · Vigilância Sanitária | `GET /api/doacoes/:id` → `buscarPorId` | `[5a]`…`[5d]` em `tests/rastreio.test.js` |
+| 6a–6d — vencida não aparece, não é aceita nem publicada | História 6 · Regra 1 · risco "doação vencida" | `validade >= CURRENT_DATE` em `repositorio.js`; validação em `doacoes.js` | `[6a]`…`[6d]` em `tests/vencidas.test.js` |
 
-**Fora da História 0 (não implementado, de propósito):** Regra 1 (doação vencida), Regra 3 (regra ausente — aguarda decisão da Marta), histórias 4 e 8 (motorista voluntário) e autenticação.
+**Ainda não implementado (de propósito):** Regra 3 (regra ausente — aguarda decisão da Marta), histórias 4 e 8 (motorista voluntário) e autenticação.
 
 ## Uso de IA
 
