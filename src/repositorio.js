@@ -18,11 +18,13 @@ export function criarRepositorio(db) {
       return rows[0];
     },
 
+    // Regra 1: doação vencida (validade antes de hoje) não aparece como disponível.
+    // A validade é o último dia em que o alimento pode ser retirado, então "hoje" ainda vale.
     // Ordena pela validade: o que vence primeiro aparece primeiro para a ONG.
     async listarDisponiveis() {
       const { rows } = await db.query(
         `SELECT ${COLUNAS} FROM doacoes
-          WHERE status = 'disponivel'
+          WHERE status = 'disponivel' AND validade >= CURRENT_DATE
           ORDER BY validade, id`
       );
       return rows;
@@ -36,13 +38,13 @@ export function criarRepositorio(db) {
       return rows[0];
     },
 
-    // UPDATE atômico: só altera se a doação ainda estiver disponível.
-    // Se nenhuma linha for alterada, outra ONG aceitou antes (Regra 2).
+    // UPDATE atômico: só altera se a doação ainda estiver disponível e dentro da validade.
+    // Se nenhuma linha for alterada, outra ONG aceitou antes (Regra 2) ou ela venceu (Regra 1).
     async marcarComoAceita(id, ong) {
       const { alteradas } = await db.query(
         `UPDATE doacoes
             SET status = 'aceita', ong = $1, aceita_em = now()
-          WHERE id = $2 AND status = 'disponivel'`,
+          WHERE id = $2 AND status = 'disponivel' AND validade >= CURRENT_DATE`,
         [ong, id]
       );
       return alteradas > 0;
