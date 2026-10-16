@@ -135,7 +135,7 @@ ela já saiu da lista. Testes em `tests/rastreio.test.js`.
 
 | Camada | Arquivo | O que faz |
 |---|---|---|
-| Rotas | `src/app.js` | `GET /api/saude`, `GET /api/doacoes`, `POST /api/doacoes`, `GET /api/doacoes/:id`, `POST /api/doacoes/:id/aceitar` |
+| Rotas | `src/app.js` | `GET /api/saude`, `GET /api/doacoes`, `POST /api/doacoes`, `POST /api/doacoes/:id/aceitar` |
 | Regras | `src/doacoes.js` | valida os campos obrigatórios e exige a ONG no aceite |
 | SQL | `src/repositorio.js` | aceite com `UPDATE` atômico (impede dois aceites da mesma doação) |
 | Banco | `src/db.js` + `migrations/` | PostgreSQL; schema com `criada_em` e `aceita_em` (medição do tempo até o aceite) |
