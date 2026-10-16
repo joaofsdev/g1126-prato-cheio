@@ -132,16 +132,19 @@ Ele é a fonte oficial: se algo aqui divergir, vale o que está lá.
 | Camada | Arquivo | O que faz |
 |---|---|---|
 | Rotas | `src/app.js` | `GET /api/saude`, `GET /api/doacoes`, `POST /api/doacoes`, `POST /api/doacoes/:id/aceitar` |
-| Regras | `src/doacoes.js` | valida os campos obrigatórios e exige a ONG no aceite |
+| Regras | `src/doacoes.js` | valida os campos obrigatórios (validade em `AAAA-MM-DD`, não no passado) e exige a ONG no aceite |
 | SQL | `src/repositorio.js` | aceite com `UPDATE` atômico (impede dois aceites da mesma doação) |
 | Banco | `src/db.js` + `migrations/` | PostgreSQL; schema com `criada_em` e `aceita_em` (medição do tempo até o aceite) |
 | Testes | `tests/doacoes.test.js` | um teste por critério de aceite, marcado com o número do critério |
 
 Códigos de resposta: `201` publicada · `400` dados inválidos ou ONG ausente ·
-`404` doação inexistente · `409` doação já aceita por outra ONG · `503` banco fora do ar.
+`404` doação inexistente · `409` doação já aceita por outra ONG ou vencida · `503` banco fora do ar.
 
-**Falta (limites conhecidos da Unidade 1, registrados em `docs/analise.md`):**
-- doação vencida ainda aparece na lista (Regra 1 — fora da História 0, está nos riscos);
+**Pronto (Atividade 2 — História 6 / Regra 1):** doação vencida não aparece na lista, não pode ser
+aceita (`409`) e não pode ser publicada com validade no passado (`400`). "Hoje" segue o fuso de
+São Paulo, na aplicação (`src/datas.js`) e no banco (`CURRENT_DATE`). Testes em `tests/vencidas.test.js`.
+
+**Falta (limites conhecidos, registrados em `docs/analise.md`):**
 - sem autenticação: qualquer pessoa pode aceitar em nome de qualquer ONG;
 - o que acontece quando a ONG aceita e não retira ainda não foi decidido (regra ausente — decide a Marta).
 
