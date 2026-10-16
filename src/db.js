@@ -6,6 +6,7 @@
 import pg from 'pg';
 import { ErroBancoIndisponivel } from './erros.js';
 import { aplicarMigrations } from './migrar.js';
+import { FUSO_DA_OPERACAO } from './datas.js';
 
 // Colunas DATE (OID 1082) voltam como texto 'AAAA-MM-DD'. Sem isso o `pg` cria um
 // Date no fuso do servidor e '2026-12-01' pode virar '2026-11-30T03:00:00Z' no JSON.
@@ -47,7 +48,7 @@ export function criarDb(url = process.env.DATABASE_URL, opcoes = {}) {
         connectionString: url,
         connectionTimeoutMillis: opcoes.connectionTimeoutMillis ?? 5000,
         // CURRENT_DATE e now() seguem o fuso da operação (Brasil), não o do servidor.
-        options: '-c timezone=America/Sao_Paulo'
+        options: `-c timezone=${FUSO_DA_OPERACAO}`
       });
       // Uma conexão ociosa que cai (ex.: banco reiniciou) não pode derrubar o processo.
       pool.on('error', (erro) => console.error('Conexão ociosa com o banco falhou:', erro.message));
