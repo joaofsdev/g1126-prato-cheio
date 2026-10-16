@@ -129,6 +129,10 @@ Ele é a fonte oficial: se algo aqui divergir, vale o que está lá.
 **Pronto (Trabalho 1 — walking skeleton):** a História 0 funciona de ponta a ponta —
 **um doador publica uma doação → uma ONG vê a doação → a ONG a aceita e ela sai da lista.**
 
+**Pronto (Atividade 2 — História 5):** a Vigilância Sanitária consulta o registro completo de uma
+doação pelo número (`GET /api/doacoes/:id`), em qualquer status — inclusive depois de aceita, quando
+ela já saiu da lista. Testes em `tests/rastreio.test.js`.
+
 | Camada | Arquivo | O que faz |
 |---|---|---|
 | Rotas | `src/app.js` | `GET /api/saude`, `GET /api/doacoes`, `POST /api/doacoes`, `POST /api/doacoes/:id/aceitar` |

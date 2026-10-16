@@ -74,6 +74,20 @@ export function criarServicoDoacoes(repositorio) {
   }
 
   /**
+   * Devolve o registro completo de uma doação, em qualquer status (rastreabilidade).
+   * @param {number} id
+   * @returns {Promise<object>}
+   * @throws {ErroNaoEncontrado} Se a doação não existir.
+   */
+  async function buscarPorId(id) {
+    const doacao = await repositorio.buscarPorId(id);
+    if (!doacao) {
+      throw new ErroNaoEncontrado('Doação não encontrada');
+    }
+    return doacao;
+  }
+
+  /**
    * Marca uma doação como aceita por uma ONG.
    *
    * A checagem de concorrência ("já foi aceita?") é feita atomicamente
@@ -108,5 +122,5 @@ export function criarServicoDoacoes(repositorio) {
     return repositorio.buscarPorId(id);
   }
 
-  return { criarDoacao, listarDisponiveis, aceitar };
+  return { criarDoacao, listarDisponiveis, buscarPorId, aceitar };
 }
