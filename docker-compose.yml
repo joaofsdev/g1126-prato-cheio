@@ -1,0 +1,43 @@
+# PostgreSQL para desenvolvimento e para os testes.
+#   docker compose up -d       sobe os dois bancos
+#   docker compose down        para (os dados de desenvolvimento ficam no volume)
+#   docker compose down -v     para e apaga os dados de desenvolvimento
+services:
+  # Banco de desenvolvimento: usado por `npm start` / `npm run dev` (DATABASE_URL).
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pratocheio
+      POSTGRES_PASSWORD: pratocheio
+      POSTGRES_DB: pratocheio
+    ports:
+      # Porta no host configurável (DB_PORTA no .env) caso a 5432 já esteja em uso.
+      - "${DB_PORTA:-5432}:5432"
+    volumes:
+      - dados-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pratocheio -d pratocheio"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Banco de testes: usado por `npm test` (TEST_DATABASE_URL). Fica em memória
+  # (tmpfs), então é descartável e os testes nunca sujam o banco de desenvolvimento.
+  db-teste:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pratocheio
+      POSTGRES_PASSWORD: pratocheio
+      POSTGRES_DB: pratocheio_teste
+    ports:
+      - "${DB_TESTE_PORTA:-5433}:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pratocheio -d pratocheio_teste"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  dados-postgres:
