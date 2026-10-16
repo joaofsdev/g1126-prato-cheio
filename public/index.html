@@ -41,6 +41,15 @@
   <p id="erro-aceitar" class="erro" role="alert"></p>
   <ul id="lista"></ul>
 
+  <fieldset>
+    <legend>Consultar doação (rastreio)</legend>
+    <label for="id-rastreio">Número da doação</label>
+    <input id="id-rastreio" type="number" min="1" placeholder="Ex.: 12">
+    <button id="consultar">Consultar</button>
+    <p id="erro-rastreio" class="erro" role="alert"></p>
+    <dl id="rastreio"></dl>
+  </fieldset>
+
   <script>
     // Envia a requisição e devolve { ok, corpo }, para a tela poder mostrar o erro da API.
     async function enviar(url, dados) {
@@ -75,7 +84,7 @@
         : '<li>Nenhuma doação disponível.</li>';
       for (const d of doacoes) {
         const li = document.createElement('li');
-        li.textContent = `${d.tipo} — ${d.quantidade} (até ${d.validade}) `;
+        li.textContent = `#${d.id} ${d.tipo} — ${d.quantidade} (até ${d.validade}) `;
         const botao = document.createElement('button');
         botao.textContent = 'Aceitar';
         botao.onclick = async () => {
@@ -108,6 +117,39 @@
       }
       campos.forEach((c) => { document.getElementById(c).value = ''; });
       carregar();
+    };
+
+    // História 5: mostra o registro completo de uma doação, em qualquer status.
+    document.getElementById('consultar').onclick = async () => {
+      mostrarErro('erro-rastreio', '');
+      const saida = document.getElementById('rastreio');
+      saida.innerHTML = '';
+      const id = document.getElementById('id-rastreio').value.trim();
+      let res, corpo;
+      try {
+        res = await fetch(`/api/doacoes/${encodeURIComponent(id)}`);
+        corpo = await res.json();
+      } catch {
+        mostrarErro('erro-rastreio', 'Sem conexão com o servidor. Tente de novo.');
+        return;
+      }
+      if (!res.ok) {
+        mostrarErro('erro-rastreio', corpo.erro ?? 'Não foi possível consultar.');
+        return;
+      }
+      const campos = [
+        ['Tipo', corpo.tipo], ['Quantidade', corpo.quantidade], ['Validade', corpo.validade],
+        ['Status', corpo.status], ['ONG', corpo.ong ?? '—'],
+        ['Publicada em', new Date(corpo.criada_em).toLocaleString('pt-BR')],
+        ['Aceita em', corpo.aceita_em ? new Date(corpo.aceita_em).toLocaleString('pt-BR') : '—']
+      ];
+      for (const [rotulo, valor] of campos) {
+        const dt = document.createElement('dt');
+        const dd = document.createElement('dd');
+        dt.textContent = rotulo;
+        dd.textContent = valor; // textContent: nada vindo da API vira HTML
+        saida.append(dt, dd);
+      }
     };
 
     carregar();
