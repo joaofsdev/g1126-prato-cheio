@@ -135,11 +135,11 @@ ela já saiu da lista. Testes em `tests/rastreio.test.js`.
 
 | Camada | Arquivo | O que faz |
 |---|---|---|
-| Rotas | `src/app.js` | `GET /api/saude`, `GET /api/doacoes`, `POST /api/doacoes`, `POST /api/doacoes/:id/aceitar` |
+| Rotas | `src/app.js` | `GET /api/saude`, `GET /api/doacoes`, `POST /api/doacoes`, `GET /api/doacoes/:id`, `POST /api/doacoes/:id/aceitar` |
 | Regras | `src/doacoes.js` | valida os campos obrigatórios (validade em `AAAA-MM-DD`, não no passado) e exige a ONG no aceite |
 | SQL | `src/repositorio.js` | aceite com `UPDATE` atômico (impede dois aceites da mesma doação) |
 | Banco | `src/db.js` + `migrations/` | PostgreSQL; schema com `criada_em` e `aceita_em` (medição do tempo até o aceite) |
-| Testes | `tests/doacoes.test.js` | um teste por critério de aceite, marcado com o número do critério |
+| Testes | `tests/` | um teste por critério de aceite e por RNF, marcado com o código (`[0.3b]`, `[6c]`, `[RNF3]`…) |
 
 Códigos de resposta: `201` publicada · `400` dados inválidos ou ONG ausente ·
 `404` doação inexistente · `409` doação já aceita por outra ONG ou vencida · `503` banco fora do ar.
@@ -154,7 +154,8 @@ São Paulo, na aplicação (`src/datas.js`) e no banco (`CURRENT_DATE`). Testes 
 
 A rastreabilidade entre histórias, critérios, regras, rotas e testes está na seção
 **Rastreabilidade** de `docs/analise.md`. Quem fez o quê nesta iteração está em
-`docs/retrospectivas/iteracao-1.md`.
+`docs/retrospectivas/iteracao-1.md`. Histórias, decisões e requisitos não funcionais da Atividade 2
+estão em **[docs/projeto.md](docs/projeto.md)**.
 
 ## Uso de IA
 
