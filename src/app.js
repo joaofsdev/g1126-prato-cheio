@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { dbPadrao } from './db.js';
 import { criarRepositorio } from './repositorio.js';
 import { criarServicoDoacoes } from './doacoes.js';
-import { ErroAplicacao } from './erros.js';
+import { ErroAplicacao, ErroValidacao } from './erros.js';
 
 // Define o caminho absoluto da pasta que contém a interface.
 const pastaPublica = fileURLToPath(
@@ -14,6 +14,16 @@ const pastaPublica = fileURLToPath(
 // Maior valor da coluna INTEGER do PostgreSQL. Um id acima disso nem chega ao banco
 // (que recusaria com erro 500 "out of range").
 const MAIOR_ID = 2_147_483_647;
+
+// Lê o :id da rota. Id inválido (texto, zero, negativo, grande demais) é recusado
+// com 400 aqui mesmo, sem chegar ao banco.
+function lerId(req) {
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id <= 0 || id > MAIOR_ID) {
+    throw new ErroValidacao('ID de doação inválido.');
+  }
+  return id;
+}
 
 // Encaminha erros de funções assíncronas ao middleware de erros.
 function rotaAssincrona(funcao) {
@@ -57,18 +67,19 @@ export function criarApp({ db = dbPadrao() } = {}) {
     res.status(201).json(novaDoacao);
   }));
 
-  // ROTA 4: Registra o aceite de uma doação por uma ONG.
+  // ROTA 4: Consulta uma doação pelo id, em qualquer status (História 5 —
+  // rastreabilidade para a Vigilância Sanitária).
+  app.get('/api/doacoes/:id', rotaAssincrona(async (req, res) => {
+    const doacao = await doacoes.buscarPorId(lerId(req));
+
+    res.json(doacao);
+  }));
+
+  // ROTA 5: Registra o aceite de uma doação por uma ONG.
   app.post(
     '/api/doacoes/:id/aceitar',
     rotaAssincrona(async (req, res) => {
-      const id = Number(req.params.id);
-
-      // Verifica se o identificador informado é válido.
-      if (!Number.isSafeInteger(id) || id <= 0 || id > MAIOR_ID) {
-        return res.status(400).json({
-          erro: 'ID de doação inválido.'
-        });
-      }
+      const id = lerId(req);
 
       // Sem valor padrão: a ONG precisa ser informada (critério 0.3).
       const doacaoAceita = await doacoes.aceitar(id, req.body?.ong);
