@@ -1,4 +1,5 @@
 import { ErroValidacao, ErroNaoEncontrado, ErroConflito } from './erros.js';
+import { hojeNaOperacao } from './datas.js';
 
 /**
  * Diz se o texto é uma data real no formato AAAA-MM-DD (ex.: recusa 2026-02-30).
@@ -36,6 +37,11 @@ function validarDadosDoacao(dados) {
   // mensagem clara, em vez de deixar o banco recusar com erro 500.
   if (!ehDataIso(validade.trim())) {
     throw new ErroValidacao('Dados inválidos: validade deve ser uma data no formato AAAA-MM-DD');
+  }
+  // Regra 1: não faz sentido publicar um alimento que já venceu. Comparar texto
+  // funciona porque as duas datas estão no formato AAAA-MM-DD.
+  if (validade.trim() < hojeNaOperacao()) {
+    throw new ErroValidacao('Dados inválidos: validade já passou');
   }
 }
 
@@ -90,7 +96,12 @@ export function criarServicoDoacoes(repositorio) {
 
     const aceita = await repositorio.marcarComoAceita(id, ong.trim());
     if (!aceita) {
-      throw new ErroConflito('Doação já foi aceita por outra ONG');
+      // O UPDATE não alterou nada: relemos para dizer à ONG o motivo certo.
+      // Se ainda está disponível, só pode ter sido a validade (Regra 1).
+      const atual = await repositorio.buscarPorId(id);
+      throw new ErroConflito(atual?.status === 'disponivel'
+        ? 'Doação vencida não pode ser aceita'
+        : 'Doação já foi aceita por outra ONG');
     }
 
     // Relê do banco para devolver o registro real, incluindo aceita_em.

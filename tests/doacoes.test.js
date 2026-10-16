@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import request from 'supertest';
 import { criarApp } from '../src/app.js';
 import { migrar, limparBanco, encerrar } from '../src/db.js';
+import { daquiA } from './ajudantes.js';
 
 const app = criarApp();
 
@@ -27,7 +28,7 @@ describe('a aplicação sobe', () => {
 
 // ---------------------------------------------------------------------------
 // Testes do walking skeleton — fluxo ponta a ponta.
-// Usam SQLite em memória (configurado em vitest.config.js).
+// Usam o PostgreSQL de teste (configurado em vitest.config.js).
 // ---------------------------------------------------------------------------
 
 describe('História 0.1 — publicar doação', () => {
@@ -35,7 +36,7 @@ describe('História 0.1 — publicar doação', () => {
   afterAll(async () => { await encerrar(); });
 
   it('[0.1a] cria a doação com status disponivel e registra o instante da publicação', async () => {
-    const res = await publicar({ tipo: 'Sopa', quantidade: '10 porções', validade: '2026-12-01' });
+    const res = await publicar({ tipo: 'Sopa', quantidade: '10 porções', validade: daquiA(1) });
 
     expect(res.status).toBe(201);
     expect(res.body.id).toBeGreaterThan(0);
@@ -52,8 +53,8 @@ describe('História 0.1 — publicar doação', () => {
   });
 
   it.each([
-    ['tipo', { quantidade: '5 kg', validade: '2026-12-01' }],
-    ['quantidade', { tipo: 'Pão', validade: '2026-12-01' }],
+    ['tipo', { quantidade: '5 kg', validade: daquiA(1) }],
+    ['quantidade', { tipo: 'Pão', validade: daquiA(1) }],
     ['validade', { tipo: 'Pão', quantidade: '5 kg' }],
   ])('[0.1b] recusa doação sem %s', async (campo, dados) => {
     const res = await publicar(dados);
@@ -63,7 +64,7 @@ describe('História 0.1 — publicar doação', () => {
   });
 
   it('[0.1b] recusa quantidade zero', async () => {
-    const res = await publicar({ tipo: 'Pão', quantidade: '0 kg', validade: '2026-12-01' });
+    const res = await publicar({ tipo: 'Pão', quantidade: '0 kg', validade: daquiA(1) });
 
     expect(res.status).toBe(400);
     expect(res.body.erro).toMatch(/quantidade/);
@@ -82,9 +83,9 @@ describe('História 0.2 — listar disponíveis', () => {
   afterAll(async () => { await encerrar(); });
 
   it('[0.2a] mostra todas as doações publicadas quando nenhuma foi aceita', async () => {
-    await publicar({ tipo: 'Sopa', quantidade: '10 porções', validade: '2026-12-01' });
-    await publicar({ tipo: 'Pão', quantidade: '20 unidades', validade: '2026-12-02' });
-    await publicar({ tipo: 'Frutas', quantidade: '5 kg', validade: '2026-12-03' });
+    await publicar({ tipo: 'Sopa', quantidade: '10 porções', validade: daquiA(1) });
+    await publicar({ tipo: 'Pão', quantidade: '20 unidades', validade: daquiA(2) });
+    await publicar({ tipo: 'Frutas', quantidade: '5 kg', validade: daquiA(3) });
 
     const res = await request(app).get('/api/doacoes');
     expect(res.status).toBe(200);
@@ -93,8 +94,8 @@ describe('História 0.2 — listar disponíveis', () => {
   });
 
   it('[0.2b] a doação aceita sai da lista e as outras continuam', async () => {
-    const pao = await publicar({ tipo: 'Pão', quantidade: '20 unidades', validade: '2026-12-05' });
-    await publicar({ tipo: 'Leite', quantidade: '10 litros', validade: '2026-12-06' });
+    const pao = await publicar({ tipo: 'Pão', quantidade: '20 unidades', validade: daquiA(5) });
+    await publicar({ tipo: 'Leite', quantidade: '10 litros', validade: daquiA(6) });
 
     await aceitar(pao.body.id, { ong: 'ONG Alimento Solidário' });
 
@@ -110,7 +111,7 @@ describe('História 0.3 — aceitar doação', () => {
   afterAll(async () => { await encerrar(); });
 
   it('[0.3a] muda o status para aceita, registra a ONG e o instante do aceite', async () => {
-    const criada = await publicar({ tipo: 'Frutas', quantidade: '5 kg', validade: '2026-12-10' });
+    const criada = await publicar({ tipo: 'Frutas', quantidade: '5 kg', validade: daquiA(10) });
 
     const res = await aceitar(criada.body.id, { ong: 'ONG Esperança' });
 
@@ -121,7 +122,7 @@ describe('História 0.3 — aceitar doação', () => {
   });
 
   it('[0.3b] recusa aceitar uma doação que já foi aceita por outra ONG', async () => {
-    const criada = await publicar({ tipo: 'Leite', quantidade: '10 litros', validade: '2026-12-07' });
+    const criada = await publicar({ tipo: 'Leite', quantidade: '10 litros', validade: daquiA(7) });
     const id = criada.body.id;
 
     await aceitar(id, { ong: 'ONG A' });
@@ -132,7 +133,7 @@ describe('História 0.3 — aceitar doação', () => {
   });
 
   it('[0.3b] mantém o primeiro aceite quando o segundo é recusado', async () => {
-    const criada = await publicar({ tipo: 'Arroz', quantidade: '8 kg', validade: '2026-12-08' });
+    const criada = await publicar({ tipo: 'Arroz', quantidade: '8 kg', validade: daquiA(8) });
     const id = criada.body.id;
 
     await aceitar(id, { ong: 'ONG A' });
@@ -144,7 +145,7 @@ describe('História 0.3 — aceitar doação', () => {
   });
 
   it('[0.3b] quando duas ONGs tentam aceitar ao mesmo tempo, só uma consegue', async () => {
-    const criada = await publicar({ tipo: 'Feijão', quantidade: '15 kg', validade: '2026-12-12' });
+    const criada = await publicar({ tipo: 'Feijão', quantidade: '15 kg', validade: daquiA(12) });
     const id = criada.body.id;
 
     const [resA, resB] = await Promise.all([
@@ -157,7 +158,7 @@ describe('História 0.3 — aceitar doação', () => {
   });
 
   it('[0.3a] recusa o aceite quando a ONG não é informada', async () => {
-    const criada = await publicar({ tipo: 'Sopa', quantidade: '10 porções', validade: '2026-12-01' });
+    const criada = await publicar({ tipo: 'Sopa', quantidade: '10 porções', validade: daquiA(1) });
 
     const res = await aceitar(criada.body.id, {});
 
