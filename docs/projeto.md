@@ -89,6 +89,11 @@ Três RNFs escolhidos porque se aplicam ao que existe no sistema. Os testes leva
 - **PREENCHER:** links dos diagramas da atividade anterior (contexto, dados/componentes). Eles não
   estavam no repositório quando este documento foi escrito.
 
+### Estados e sequência (atividade "Projeto" com apoio de IA)
+
+Diagrama de estados da doação e de sequência do aceite, com a versão inicial da IA, os problemas
+encontrados e as versões finais: [`docs/diagramas/`](diagramas/README.md).
+
 ### Componentes (estado atual do código)
 
 ```mermaid
