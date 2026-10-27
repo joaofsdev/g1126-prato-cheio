@@ -51,7 +51,7 @@
     <input id="motorista" placeholder="Ex.: João Silva">
     <button id="confirmar-retirada">Confirmar retirada</button>
     <p id="erro-retirada" class="erro" role="alert"></p>
-    <p id="sucesso-retirada" role="status"></p>
+    <output id="sucesso-retirada"></output>
   </fieldset>
 
   <fieldset>
@@ -63,7 +63,7 @@
     <dl id="rastreio"></dl>
   </fieldset>
 
-  <script>
+  <script type="module">
     // Envia a requisição e devolve { ok, corpo }, para a tela poder mostrar o erro da API.
     async function enviar(url, dados) {
       try {
@@ -205,7 +205,7 @@
       }
     };
 
-    carregar();
+    await carregar();
   </script>
 </body>
 </html>
