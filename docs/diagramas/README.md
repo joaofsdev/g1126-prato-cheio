@@ -76,3 +76,15 @@ A revisão posterior da História 8 foi desenvolvida na branch `docs/atualizacao
 - Atualização da documentação da entrega.
 
 As alterações devem ser submetidas por Pull Request para revisão de outro integrante do grupo.
+
+## Reflexão final
+
+**Qual dos dois diagramas foi mais útil para compreender ou questionar uma decisão do projeto? Por quê?**
+
+O **Diagrama de Estados** foi o mais útil para compreender e questionar as decisões do projeto Prato Cheio, pois permitiu visualizar o ciclo de vida de uma doação e identificar quais transições realmente estão implementadas no sistema.
+
+Durante a análise, percebemos a importância de diferenciar estados persistidos no banco de dados de condições derivadas, como uma doação vencida, que continua registrada como `disponivel`, mas deixa de aparecer na listagem e não pode mais ser aceita. Também identificamos que o retorno de uma doação aceita para disponível depende de uma regra de negócio ainda não definida.
+
+Além disso, a implementação da História 8 acrescentou a transição de `aceita` para `retirada`, demonstrando como a evolução dos requisitos modifica o comportamento do sistema.
+
+Dessa forma, o diagrama não serviu apenas para documentar o funcionamento da aplicação, mas também para questionar decisões, identificar regras pendentes e verificar a consistência entre requisitos, código e modelo de dados.
