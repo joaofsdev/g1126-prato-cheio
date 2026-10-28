@@ -98,6 +98,21 @@ export function criarApp({ db = dbPadrao() } = {}) {
     })
   );
 
+  // ROTA 6: Confirma a retirada de uma doação aceita por um motorista voluntário.
+  app.post(
+    '/api/doacoes/:id/retirar',
+    rotaAssincrona(async (req, res) => {
+      const id = lerId(req);
+
+      const doacaoRetirada = await doacoes.confirmarRetirada(
+        id,
+        req.body?.motorista
+      );
+
+      res.json(doacaoRetirada);
+    })
+  );
+
   // Retorna 404 para endereços de API inexistentes.
   app.use('/api', (req, res) => {
     res.status(404).json({

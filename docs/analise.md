@@ -151,7 +151,7 @@ Essa restrição exige que a solução controle o estado da doação e impeça u
 ## Critérios de aceite
 
 Cada critério tem um código (ex.: `0.1a`) que aparece no nome do teste correspondente em `tests/doacoes.test.js`.
-Os critérios das histórias implementadas na Atividade 2 (5a–5d e 6a–6d) estão em `docs/projeto.md`.
+Os critérios das histórias implementadas na Atividade 2 (5a–5d e 6a–6d) estão em `docs/projeto.md`. Os critérios da História 8, implementada nesta evolução, estão descritos abaixo.
 
 ### História 0.1 — Publicar doação
 
@@ -167,6 +167,15 @@ Os critérios das histórias implementadas na Atividade 2 (5a–5d e 6a–6d) es
 
 - **0.3a** — Dado que a doação está disponível, quando a ONG aceita informando seu nome, então o status muda para `aceita` com o nome da ONG e o instante do aceite (`aceita_em`) registrados. Sem o nome da ONG, o aceite é recusado.
 - **0.3b** — Dado que a doação já foi aceita por outra ONG, quando uma segunda ONG tenta aceitar, então o sistema recusa (HTTP 409) e mantém o primeiro aceite — inclusive quando os dois pedidos chegam ao mesmo tempo.
+
+### História 8 — Confirmar retirada da doação
+
+- **8a** — Dado que uma doação foi aceita por uma ONG, quando o motorista informa seu nome e confirma a retirada, então o status muda para `retirada` e são registrados o motorista e o instante da coleta (`retirada_em`).
+- **8b** — Dado que o nome do motorista não foi informado, quando a retirada é solicitada, então o sistema recusa a operação sem alterar a doação.
+- **8c** — Dado que uma doação não está no status `aceita`, quando a retirada é solicitada, então o sistema recusa a transição e preserva os dados existentes.
+- **8d** — Dado que a retirada já foi confirmada, quando uma nova confirmação é solicitada, então o sistema impede o registro duplicado.
+
+**Limite da validação:** os testes automatizados verificam a confirmação pela API e suas regras de negócio. O uso efetivo pelo celular e o comportamento com conexão instável ainda exigem validação específica.
 
 ## Riscos
 
@@ -211,8 +220,9 @@ Como o que foi implementado se liga às histórias, regras e critérios. Os test
 | 0.3b — segundo aceite recusado | Regra 2 · restrição de negócio · risco de condição de corrida | `UPDATE … WHERE status = 'disponivel'` atômico; HTTP 409 | `[0.3b] recusa aceitar…`, `mantém o primeiro aceite…`, `duas ONGs ao mesmo tempo…` |
 | 5a–5d — consultar rastreio pelo id | História 5 · Vigilância Sanitária | `GET /api/doacoes/:id` → `buscarPorId` | `[5a]`…`[5d]` em `tests/rastreio.test.js` |
 | 6a–6d — vencida não aparece, não é aceita nem publicada | História 6 · Regra 1 · risco "doação vencida" | `validade >= CURRENT_DATE` em `repositorio.js`; validação em `doacoes.js` | `[6a]`…`[6d]` em `tests/vencidas.test.js` |
+| 8a–8d — confirmar retirada, validar motorista e impedir transições indevidas | História 8 · motorista voluntário | Confirmação de retirada na API; status `retirada`, `motorista` e `retirada_em` no PostgreSQL | `tests/retirada.test.js` |
 
-**Ainda não implementado (de propósito):** Regra 3 (regra ausente — aguarda decisão da Marta), histórias 4 e 8 (motorista voluntário) e autenticação.
+**Ainda não implementado (de propósito):** Regra 3 (regra ausente — aguarda decisão da Marta), autenticação e validação da interface pelo celular com conexão instável. A confirmação de retirada da História 8 está implementada no backend, mas esses requisitos de uso ainda não foram comprovados.
 
 ## Uso de IA
 

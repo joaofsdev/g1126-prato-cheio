@@ -43,6 +43,17 @@
   <ul id="lista"></ul>
 
   <fieldset>
+    <legend>Confirmar retirada da doação</legend>
+    <label for="id-retirada">Número da doação</label>
+    <input id="id-retirada" type="number" min="1" placeholder="Ex.: 12">
+    <label for="motorista">Nome do motorista voluntário</label>
+    <input id="motorista" placeholder="Ex.: João Silva">
+    <button id="confirmar-retirada">Confirmar retirada</button>
+    <p id="erro-retirada" class="erro" role="alert"></p>
+    <output id="sucesso-retirada"></output>
+  </fieldset>
+
+  <fieldset>
     <legend>Consultar doação (rastreio)</legend>
     <label for="id-rastreio">Número da doação</label>
     <input id="id-rastreio" type="number" min="1" placeholder="Ex.: 12">
@@ -51,7 +62,7 @@
     <dl id="rastreio"></dl>
   </fieldset>
 
-  <script>
+  <script type="module">
     // Envia a requisição e devolve { ok, corpo }, para a tela poder mostrar o erro da API.
     async function enviar(url, dados) {
       try {
@@ -123,6 +134,41 @@
       carregar();
     };
 
+    document.getElementById('confirmar-retirada').onclick = async () => {
+      mostrarErro('erro-retirada', '');
+      document.getElementById('sucesso-retirada').textContent = '';
+
+      const id = document.getElementById('id-retirada').value.trim();
+      const motorista = document.getElementById('motorista').value.trim();
+
+      if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id))) {
+        mostrarErro('erro-retirada', 'Informe um número de doação válido.');
+        return;
+      }
+
+      if (!motorista) {
+        mostrarErro('erro-retirada', 'Informe o nome do motorista.');
+        document.getElementById('motorista').focus();
+        return;
+      }
+
+      const { ok, corpo } = await enviar(
+        `/api/doacoes/${id}/retirar`,
+        { motorista }
+      );
+
+      if (!ok) {
+        mostrarErro('erro-retirada', corpo.erro ?? 'Não foi possível confirmar a retirada.');
+        return;
+      }
+
+      document.getElementById('sucesso-retirada').textContent =
+        `Retirada da doação #${id} confirmada com sucesso.`;
+
+      document.getElementById('motorista').value = '';
+      await carregar();
+    };
+
     // História 5: mostra o registro completo de uma doação, em qualquer status.
     document.getElementById('consultar').onclick = async () => {
       mostrarErro('erro-rastreio', '');
@@ -145,7 +191,9 @@
         ['Tipo', corpo.tipo], ['Quantidade', corpo.quantidade], ['Validade', corpo.validade],
         ['Status', corpo.status], ['ONG', corpo.ong ?? '—'],
         ['Publicada em', new Date(corpo.criada_em).toLocaleString('pt-BR')],
-        ['Aceita em', corpo.aceita_em ? new Date(corpo.aceita_em).toLocaleString('pt-BR') : '—']
+        ['Aceita em', corpo.aceita_em ? new Date(corpo.aceita_em).toLocaleString('pt-BR') : '—'],
+        ['Motorista', corpo.motorista ?? '—'],
+        ['Retirada em', corpo.retirada_em ? new Date(corpo.retirada_em).toLocaleString('pt-BR') : '—']
       ];
       for (const [rotulo, valor] of campos) {
         const dt = document.createElement('dt');
@@ -156,7 +204,7 @@
       }
     };
 
-    carregar();
+    await carregar();
   </script>
 </body>
 </html>
