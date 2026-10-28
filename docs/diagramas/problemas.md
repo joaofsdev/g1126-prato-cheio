@@ -47,7 +47,7 @@ A primeira versão final dos diagramas considerava a doação aceita como o últ
 
 Entretanto, a História 8 introduziu uma nova operação: a confirmação de retirada de uma doação previamente aceita, realizada por um motorista voluntário.
 
-Essa funcionalidade foi desenvolvida na branch `feat/confirmar-retirada-doacao` e ainda depende da integração de sua PR à `main`.
+Essa funcionalidade foi desenvolvida na branch `feat/confirmar-retirada-doacao` e integrada à `main` pelo PR #10.
 
 ### Evolução 1 — Inclusão do estado `retirada`
 
@@ -109,7 +109,7 @@ Essas regras foram incorporadas aos diagramas finais para representar o comporta
 | Registro do motorista e da data da retirada | Campos `motorista` e `retirada_em` |
 | Regra 3 ainda pendente | `docs/analise.md` |
 
-Os itens relacionados à História 8 estão implementados na branch `feat/confirmar-retirada-doacao` e não devem ser interpretados como funcionalidades já integradas à `main` enquanto sua PR permanecer pendente.
+Os itens da História 8 estão integrados à `main` desde o PR #10.
 
 ## Reflexão sobre os diagramas
 

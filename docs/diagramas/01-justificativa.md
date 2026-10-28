@@ -47,7 +47,7 @@ A análise conjunta permite verificar se as transições representadas no modelo
 
 A revisão posterior dos diagramas considerou a implementação da História 8, desenvolvida na branch `feat/confirmar-retirada-doacao`.
 
-Enquanto sua PR estiver pendente de aprovação, a confirmação de retirada deve ser interpretada como uma funcionalidade implementada nessa branch, ainda não integrada à `main`.
+A PR foi integrada à `main` (PR #10), e a confirmação de retirada faz parte do comportamento atual do sistema.
 
 Essa distinção permite documentar a evolução do projeto sem confundir funcionalidades já presentes na branch principal com alterações em processo de revisão.
 
