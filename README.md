@@ -135,27 +135,36 @@ ela já saiu da lista. Testes em `tests/rastreio.test.js`.
 
 | Camada | Arquivo | O que faz |
 |---|---|---|
-| Rotas | `src/app.js` | `GET /api/saude`, `GET /api/doacoes`, `POST /api/doacoes`, `GET /api/doacoes/:id`, `POST /api/doacoes/:id/aceitar` |
-| Regras | `src/doacoes.js` | valida os campos obrigatórios (validade em `AAAA-MM-DD`, não no passado) e exige a ONG no aceite |
-| SQL | `src/repositorio.js` | aceite com `UPDATE` atômico (impede dois aceites da mesma doação) |
-| Banco | `src/db.js` + `migrations/` | PostgreSQL; schema com `criada_em` e `aceita_em` (medição do tempo até o aceite) |
+| Rotas | `src/app.js` | `GET /api/saude`, `GET /api/doacoes`, `POST /api/doacoes`, `GET /api/doacoes/:id`, `POST /api/doacoes/:id/aceitar`, `POST /api/doacoes/:id/retirar` |
+| Regras | `src/doacoes.js` | valida os campos obrigatórios (validade em `AAAA-MM-DD`, não no passado), exige a ONG no aceite e o motorista na retirada |
+| SQL | `src/repositorio.js` | aceite e retirada com `UPDATE` atômico (impede dois aceites ou duas retiradas da mesma doação) |
+| Banco | `src/db.js` + `migrations/` | PostgreSQL; schema com `criada_em` e `aceita_em` (medição do tempo até o aceite), `motorista` e `retirada_em` |
 | Testes | `tests/` | um teste por critério de aceite e por RNF, marcado com o código (`[0.3b]`, `[6c]`, `[RNF3]`…) |
 
-Códigos de resposta: `201` publicada · `400` dados inválidos ou ONG ausente ·
-`404` doação inexistente · `409` doação já aceita por outra ONG ou vencida · `503` banco fora do ar.
+Códigos de resposta: `201` publicada · `400` dados inválidos, ONG ou motorista ausente ·
+`404` doação inexistente · `409` doação já aceita por outra ONG, vencida, ainda não aceita (na retirada)
+ou já retirada · `503` banco fora do ar.
 
 **Pronto (Atividade 2 — História 6 / Regra 1):** doação vencida não aparece na lista, não pode ser
 aceita (`409`) e não pode ser publicada com validade no passado (`400`). "Hoje" segue o fuso de
 São Paulo, na aplicação (`src/datas.js`) e no banco (`CURRENT_DATE`). Testes em `tests/vencidas.test.js`.
 
+**Pronto (História 8 — confirmar retirada):** o motorista voluntário confirma a retirada de uma doação
+aceita (`POST /api/doacoes/:id/retirar`), informando seu nome. A doação passa a `retirada`, com
+`motorista` e `retirada_em` registrados. Só uma doação `aceita` pode ser retirada, e uma segunda
+confirmação, mesmo simultânea, é recusada (`409`). Testes em `tests/retirada.test.js`; schema em
+`migrations/002_adiciona_confirmacao_retirada.sql`.
+
 **Falta (limites conhecidos, registrados em `docs/analise.md`):**
 - sem autenticação: qualquer pessoa pode aceitar em nome de qualquer ONG;
-- o que acontece quando a ONG aceita e não retira ainda não foi decidido (regra ausente — decide a Marta).
+- o que acontece quando a ONG aceita e não retira ainda não foi decidido (regra ausente — decide a Marta);
+- uso pelo celular com conexão instável ainda não validado (Histórias 4 e 8).
 
 A rastreabilidade entre histórias, critérios, regras, rotas e testes está na seção
 **Rastreabilidade** de `docs/analise.md`. Quem fez o quê nesta iteração está em
 `docs/retrospectivas/iteracao-1.md`. Histórias, decisões e requisitos não funcionais da Atividade 2
-estão em **[docs/projeto.md](docs/projeto.md)**.
+estão em **[docs/projeto.md](docs/projeto.md)**. As decisões arquiteturais estão em `docs/adr/`, e as
+três atividades sobre ADRs estão organizadas em [`docs/adr/atividades-adr.md`](docs/adr/atividades-adr.md).
 
 ## Uso de IA
 
