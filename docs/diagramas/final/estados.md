@@ -3,7 +3,7 @@
 
 Pergunta que responde: **quais estados uma doação pode assumir e quais eventos provocam as mudanças?**
 
-Este diagrama contempla o fluxo original de publicação e aceite de doações e a evolução introduzida pela História 8, implementada na branch `feat/confirmar-retirada-doacao`, cuja integração à `main` ainda está pendente.
+Este diagrama contempla o fluxo original de publicação e aceite de doações e a evolução introduzida pela História 8, implementada na branch `feat/confirmar-retirada-doacao`, integrada à `main` pelo PR #10.
 
 ```mermaid
 stateDiagram-v2
@@ -77,7 +77,7 @@ A História 8 introduz a migração `002_adiciona_confirmacao_retirada.sql`, que
 
 O estado `disponivel (vencida)` não representa um novo valor gravado na coluna `status`. Trata-se de uma condição derivada da validade da doação.
 
-**Situação de integração:** a História 8 está implementada na branch `feat/confirmar-retirada-doacao` e depende da aprovação e integração de sua PR à `main`. Até essa integração, o estado `retirada` representa a evolução desenvolvida, não o comportamento da branch principal.
+**Situação de integração:** integrada à `main` pelo PR #10 (`fff59e0`). O estado `retirada` faz parte do comportamento atual.
 
 ## Fontes
 

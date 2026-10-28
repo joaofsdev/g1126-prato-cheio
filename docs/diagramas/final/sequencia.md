@@ -3,7 +3,7 @@
 
 Pergunta que respondem: **como os componentes do sistema interagem durante o aceite de uma doação e sua posterior retirada, incluindo os caminhos de sucesso e erro?**
 
-O primeiro fluxo representa o aceite de uma doação pela ONG, já existente na `main`. O segundo representa a confirmação de retirada pelo motorista voluntário, desenvolvida na História 8, na branch `feat/confirmar-retirada-doacao`, ainda pendente de integração à `main`.
+O primeiro fluxo representa o aceite de uma doação pela ONG, já existente na `main`. O segundo representa a confirmação de retirada pelo motorista voluntário, desenvolvida na História 8, na branch `feat/confirmar-retirada-doacao`, integrada à `main` pelo PR #10.
 
 ## 1. Aceite de doação pela ONG
 
@@ -157,7 +157,7 @@ Na confirmação de retirada, caso nenhuma linha seja alterada, o serviço retor
 
 Os dois fluxos são implementados na mesma arquitetura, composta pela rota Express, serviço de regras de negócio, repositório SQL e PostgreSQL.
 
-**Situação de integração:** o fluxo de retirada está implementado na branch `feat/confirmar-retirada-doacao`, mas ainda depende da aprovação da respectiva PR para fazer parte da `main`.
+**Situação de integração:** integrado à `main` pelo PR #10 (`fff59e0`). O fluxo de retirada faz parte do comportamento atual.
 
 ## Fontes
 

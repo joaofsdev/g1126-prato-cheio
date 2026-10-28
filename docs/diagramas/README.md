@@ -30,7 +30,7 @@
 
 4. **Primeira revisão:** os diagramas corrigidos foram armazenados em `final/`, representando as funcionalidades implementadas naquele momento, principalmente a publicação e o aceite de doações.
 
-5. **Evolução da História 8:** após a implementação da confirmação de retirada por motorista voluntário, foi realizada uma nova revisão dos diagramas finais, considerando as alterações desenvolvidas na branch `feat/confirmar-retirada-doacao`.
+5. **Evolução da História 8:** após a implementação da confirmação de retirada por motorista voluntário, foi realizada uma nova revisão dos diagramas finais, considerando as alterações desenvolvidas na branch `feat/confirmar-retirada-doacao`, integrada à `main` pelo PR #10.
 
 6. **Atualização dos diagramas:** o Diagrama de Estados passou a representar a transição `aceita → retirada`. O Diagrama de Sequência foi ampliado para documentar o endpoint de confirmação, suas validações, os retornos HTTP e a proteção contra confirmações simultâneas.
 
@@ -52,11 +52,7 @@ A implementação utiliza uma atualização condicional no PostgreSQL para imped
 
 ### Situação de integração
 
-A funcionalidade foi desenvolvida na branch `feat/confirmar-retirada-doacao`.
-
-Enquanto sua PR estiver pendente de aprovação, os diagramas atualizados representam a evolução implementada nessa branch, e não uma funcionalidade já integrada à `main`.
-
-A integração da História 8 deverá ser considerada na revisão da PR de documentação, para manter a consistência entre os diagramas e o código da branch principal.
+A funcionalidade foi desenvolvida na branch `feat/confirmar-retirada-doacao` e integrada à `main` pelo PR #10 (commit `fff59e0`, 28/10/2026). Os diagramas finais representam o comportamento atual da `main`.
 
 ## Contribuição por integrante
 
