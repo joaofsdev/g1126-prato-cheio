@@ -23,8 +23,8 @@ no nome do teste correspondente.
 | **6d** | **Dado** validade anterior a hoje, **quando** o doador publica, **então** recebe 400 e nada é gravado. | `[6d] recusa com 400…`, `[6d] não grava nada…` |
 
 **Onde está:** `validade >= CURRENT_DATE` na listagem e no `UPDATE` atômico do aceite
-(`src/repositorio.js:27` e `:47`); motivo do 409 em `aceitar` (`src/doacoes.js:131`); recusa na
-publicação (`src/doacoes.js:56`); "hoje" no fuso de São Paulo (`src/datas.js:19`), o mesmo da conexão
+(`src/repositorio.js:18` e `:36`); motivo do 409 em `aceitar` (`src/doacoes.js:117`); recusa na
+publicação (`src/doacoes.js:62`); "hoje" no fuso de São Paulo (`src/datas.js:19`), o mesmo da conexão
 (`src/db.js:51`).
 
 ### História 5 — Consultar rastreio de uma doação
@@ -40,11 +40,39 @@ publicação (`src/doacoes.js:56`); "hoje" no fuso de São Paulo (`src/datas.js:
 | **5d** | **Dado** um id inválido (`abc`, `0`, `-1`, `1.5`, acima do INTEGER), **quando** consulta, **então** recebe 400 sem consultar o banco. | `[5d] responde 400 para id inválido…` (5 casos), `[5d] id inválido é recusado sem consultar o banco` |
 
 **Onde está:** rota `GET /api/doacoes/:id` (`src/app.js:82`), validação do id em `lerId`
-(`src/app.js:20`), `buscarPorId` com 404 (`src/doacoes.js:95`). Na tela: "Consultar doação (rastreio)".
+(`src/app.js:20`), `buscarPorId` com 404 (`src/doacoes.js:84`). Na tela: "Consultar doação (rastreio)".
+
+### História 8 — Confirmar retirada da doação
+
+> Como motorista voluntário, quero confirmar a retirada de uma doação pelo celular, para registrar que o
+> alimento foi coletado dentro da janela prevista.
+
+Os critérios 8a–8d estão em `docs/analise.md`. Os testes usam uma numeração própria (`[8.1]`…`[8.10]`);
+a coluna da direita mostra qual teste comprova cada critério.
+
+| Critério | Dado / Quando / Então | Teste (`tests/retirada.test.js`) |
+|---|---|---|
+| **8a** | **Dado** uma doação aceita por uma ONG, **quando** o motorista informa seu nome e confirma a retirada, **então** o status muda para `retirada` e são registrados o motorista e o instante da coleta (`retirada_em`). | `[8.1] confirma a retirada de uma doação aceita`, `[8.2] preserva o histórico da doação após a retirada` |
+| **8b** | **Dado** que o nome do motorista não foi informado, **quando** a retirada é solicitada, **então** o sistema recusa (400) sem alterar a doação. | `[8.3] recusa retirada sem identificação do motorista` |
+| **8c** | **Dado** uma doação que não está no status `aceita`, **quando** a retirada é solicitada, **então** o sistema recusa a transição (409) e preserva os dados. | `[8.7] impede retirada antes do aceite da ONG` |
+| **8d** | **Dado** que a retirada já foi confirmada, **quando** uma nova confirmação é solicitada, **então** o sistema impede o registro duplicado (409), inclusive com pedidos simultâneos. | `[8.8] impede confirmar duas vezes a mesma retirada`, `[8.9] permite somente uma confirmação simultânea` |
+
+Testes adicionais, sem critério próprio: `[8.4]` nome do motorista acima de 120 caracteres (400),
+`[8.5]` id inválido (400), `[8.6]` doação inexistente (404) e `[8.10]` doação retirada não aparece na lista.
+
+**Onde está:** rota `POST /api/doacoes/:id/retirar` (`src/app.js:102`); `confirmarRetirada`
+(`src/doacoes.js:127`), que recusa status diferente de `aceita` (`:146`); `UPDATE … WHERE status = 'aceita'`
+atômico em `marcarComoRetirada` (`src/repositorio.js:42`); status `retirada` e colunas `motorista` e
+`retirada_em` em `migrations/002_adiciona_confirmacao_retirada.sql`. Na tela: "Confirmar retirada da doação".
+
+**Limite:** os testes verificam a confirmação pela API. O uso pelo celular com conexão instável ainda não
+foi validado, e a retirada não confere se a validade já passou.
 
 ### Fora do escopo desta evolução
 
-- Histórias 4 e 8 (motorista confirma a retirada) e Regra 3 (ONG aceita e não retira — aguarda a Marta).
+- História 4 (motorista confirma a coleta pelo celular): a funcionalidade é a mesma da História 8; falta
+  validar o uso em celular com conexão instável.
+- Regra 3 (ONG aceita e não retira — aguarda a Marta).
 - Autenticação: o nome da ONG continua sendo informado, não verificado. Por isso não há cenário de
   "permissão negada" (403) nos testes — não existe identidade para negar.
 
@@ -77,17 +105,17 @@ Três RNFs escolhidos porque se aplicam ao que existe no sistema. Os testes leva
 
 | RNF | Enunciado | Onde aparece no código | Como é verificado | Impacto no projeto |
 |---|---|---|---|---|
-| **RNF1 — Confiabilidade** | Toda entrada é validada e todo erro responde no mesmo formato `{ "erro": "…" }` com o status certo; banco fora do ar responde 503, não 500. | `src/erros.js:4-39` (classes com status); middleware de erros `src/app.js:111`; `validarDadosDoacao` `src/doacoes.js:31` (inclui data real `AAAA-MM-DD`, `:51`); tradução de falha de conexão `src/db.js:28` | `[RNF1]` em `tests/rnf.test.js`; `Falha de banco` em `tests/postgresql.test.js` (banco inalcançável de verdade → 503); `[0.1b]`, `[5c]`, `[5d]`, `[6d]` | O middleware deixou de decidir o status pelo texto da mensagem; a validação de data foi exigida pela coluna `DATE` |
-| **RNF2 — Manutenibilidade / Testabilidade** | O acesso a dados fica isolado em camadas e cada camada recebe suas dependências, para poder ser trocada nos testes. | `criarApp({ db })` `src/app.js:41-42`; `criarServicoDoacoes(repositorio)` `src/doacoes.js:65`; `criarRepositorio(db)` `src/repositorio.js:10`; driver só em `src/db.js:38`; schema em `migrations/` + `src/migrar.js:17` | `[RNF2]` em `tests/rnf.test.js` (regras testadas com repositório falso, sem banco); `[5d] … sem consultar o banco` (db espião); os 16 testes da U1 passaram sem alteração após trocar o banco | A migração SQLite → PostgreSQL ficou contida em `db.js` e `repositorio.js` (ADR 0002 e 0003) |
-| **RNF3 — Segurança** | Nenhum valor do usuário é concatenado em SQL; erros não expõem detalhes internos; entradas têm limite de tamanho; o servidor não anuncia sua tecnologia. | Consultas com `$1, $2…` em `src/repositorio.js` (ex.: `:15`, `:35`, `:46`); 500 genérico `src/app.js:129`; limite de 100 kb `src/app.js:56`; `TAMANHO_MAXIMO` `src/doacoes.js:6`; `x-powered-by` desligado `src/app.js:46`; `nosniff` `src/app.js:51`; credenciais só em variável de ambiente (`.env` fora do Git) | `[RNF3]` em `tests/rnf.test.js`: SQL malicioso gravado como texto e tabela intacta, 500 sem "relation"/"doacoes", 413, tamanho máximo, cabeçalhos | Sem autenticação ainda — o maior risco de segurança restante (ver Riscos em `docs/analise.md`) |
+| **RNF1 — Confiabilidade** | Toda entrada é validada e todo erro responde no mesmo formato `{ "erro": "…" }` com o status certo; banco fora do ar responde 503, não 500. | `src/erros.js:4-39` (classes com status); middleware de erros `src/app.js:126`; `validarDadosDoacao` `src/doacoes.js:27` (inclui data real `AAAA-MM-DD`, `:56`); tradução de falha de conexão `src/db.js:28` | `[RNF1]` em `tests/rnf.test.js`; `Falha de banco` em `tests/postgresql.test.js` (banco inalcançável de verdade → 503); `[0.1b]`, `[5c]`, `[5d]`, `[6d]` | O middleware deixou de decidir o status pelo texto da mensagem; a validação de data foi exigida pela coluna `DATE` |
+| **RNF2 — Manutenibilidade / Testabilidade** | O acesso a dados fica isolado em camadas e cada camada recebe suas dependências, para poder ser trocada nos testes. | `criarApp({ db })` `src/app.js:41-42`; `criarServicoDoacoes(repositorio)` `src/doacoes.js:67`; `criarRepositorio(db)` `src/repositorio.js:4`; driver só em `src/db.js:38`; schema em `migrations/` + `src/migrar.js:17` | `[RNF2]` em `tests/rnf.test.js` (regras testadas com repositório falso, sem banco); `[5d] … sem consultar o banco` (db espião); os 16 testes da U1 passaram sem alteração após trocar o banco | A migração SQLite → PostgreSQL ficou contida em `db.js` e `repositorio.js` (ADR 0002 e 0003) |
+| **RNF3 — Segurança** | Nenhum valor do usuário é concatenado em SQL; erros não expõem detalhes internos; entradas têm limite de tamanho; o servidor não anuncia sua tecnologia. | Consultas com `$1, $2…` em `src/repositorio.js` (ex.: `:9`, `:26`, `:36`, `:48`); 500 genérico `src/app.js:144`; limite de 100 kb `src/app.js:56`; `TAMANHO_MAXIMO` `src/doacoes.js:5`; `x-powered-by` desligado `src/app.js:46`; `nosniff` `src/app.js:51`; credenciais só em variável de ambiente (`.env` fora do Git) | `[RNF3]` em `tests/rnf.test.js`: SQL malicioso gravado como texto e tabela intacta, 500 sem "relation"/"doacoes", 413, tamanho máximo, cabeçalhos | Sem autenticação ainda — o maior risco de segurança restante (ver Riscos em `docs/analise.md`) |
 
 ## Diagramas
 
 ### Da atividade anterior
 
 - Mapa de stakeholders: em [`docs/analise.md` → Mapa de stakeholders](analise.md#mapa-de-stakeholders).
-- **PREENCHER:** links dos diagramas da atividade anterior (contexto, dados/componentes). Eles não
-  estavam no repositório quando este documento foi escrito.
+- Os diagramas de contexto e de dados/componentes da atividade anterior não foram versionados no
+  repositório. Os diagramas atuais estão abaixo (componentes e dados) e em [`docs/diagramas/`](diagramas/README.md).
 
 ### Estados e sequência (atividade "Projeto" com apoio de IA)
 
@@ -117,10 +145,12 @@ erDiagram
     text tipo "obrigatório, até 100 caracteres"
     text quantidade "obrigatório, até 50 caracteres"
     date validade "último dia de retirada"
-    text status "disponivel | aceita"
+    text status "disponivel | aceita | retirada"
     text ong "preenchido no aceite"
     timestamptz criada_em "default now()"
     timestamptz aceita_em "preenchido no aceite"
+    text motorista "preenchido na retirada"
+    timestamptz retirada_em "preenchido na retirada"
   }
   schema_migrations {
     text versao PK
@@ -132,12 +162,15 @@ erDiagram
 
 Ver `docs/adr/`: [0001 — stack](adr/0001-escolha-da-stack.md) ·
 [0002 — SQLite → PostgreSQL](adr/0002-migracao-sqlite-para-postgresql.md) ·
-[0003 — camadas com injeção de dependência e erros tipados](adr/0003-camadas-com-injecao-de-dependencia-e-erros-tipados.md).
+[0003 — camadas com injeção de dependência e erros tipados](adr/0003-camadas-com-injecao-de-dependencia-e-erros-tipados.md) ·
+[0004 — reavaliação para várias cidades](adr/0004-reavaliacao-para-varias-cidades.md) (proposto).
+As três atividades sobre ADRs estão organizadas em [`adr/atividades-adr.md`](adr/atividades-adr.md).
 
 ## Critérios de validação do projeto
 
 - `npm test` verde, localmente e no CI (PostgreSQL real como service container).
-- Todo critério de aceite (0.x, 5x, 6x) e todo RNF tem pelo menos um teste com o código no nome.
+- Todo critério de aceite (0.x, 5x, 6x, 8x) e todo RNF tem pelo menos um teste. Os critérios 0.x, 5x e 6x
+  aparecem no nome do teste; os 8x estão ligados aos testes `[8.x]` pela tabela da História 8.
 - Os testes da Unidade 1 continuam passando depois da troca de banco (evidência da refatoração).
 - Cobertura gerada por `npm run test:cobertura`.
 - Cada mudança entra por Pull Request revisado por outro integrante.
@@ -146,4 +179,9 @@ Ver `docs/adr/`: [0001 — stack](adr/0001-escolha-da-stack.md) ·
 
 O código, os testes e a primeira versão desta documentação foram gerados com apoio do Claude Code a
 partir dos critérios de aceite e decisões definidos pelo grupo, e revisados antes de cada commit.
-**PREENCHER:** o que foi alterado ou recusado do que a IA sugeriu.
+
+Nos diagramas, a versão inicial foi gerada pelo Claude e a revisão da História 8 contou com o ChatGPT. As
+versões da IA foram preservadas em `docs/diagramas/ia-versao-inicial/`, e os problemas encontrados e as
+correções estão em [`docs/diagramas/problemas.md`](diagramas/problemas.md).
+
+**PREENCHER:** o que foi alterado ou recusado do que a IA sugeriu no código e nos testes desta evolução.
