@@ -6,27 +6,50 @@ import { daquiA } from './ajudantes.js';
 
 const app = criarApp();
 
-async function publicar() {
+const ONG = 'ONG Esperança';
+const MOTORISTA = 'João Silva';
+const ID_INEXISTENTE = 999999;
+
+// --- Ajudantes ---------------------------------------------------------------
+
+function publicar() {
   return request(app)
     .post('/api/doacoes')
     .send({
       tipo: 'Alimentos não perecíveis',
       quantidade: '10 kg',
-      validade: daquiA(10)
+      validade: daquiA(10),
     });
 }
 
-async function aceitar(id) {
+function aceitar(id) {
   return request(app)
     .post(`/api/doacoes/${id}/aceitar`)
-    .send({ ong: 'ONG Esperança' });
+    .send({ ong: ONG });
 }
 
-async function retirar(id, corpo) {
+function retirar(id, corpo) {
   return request(app)
     .post(`/api/doacoes/${id}/retirar`)
     .send(corpo);
 }
+
+function consultar(id) {
+  return request(app).get(`/api/doacoes/${id}`);
+}
+
+function listar() {
+  return request(app).get('/api/doacoes');
+}
+
+// Publica uma doação e a aceita, deixando-a pronta para a retirada.
+async function criarDoacaoAceita() {
+  const { body: { id } } = await publicar();
+  await aceitar(id);
+  return id;
+}
+
+// --- Testes ------------------------------------------------------------------
 
 describe('História 8 — confirmação de retirada da doação', () => {
   beforeEach(async () => {
@@ -39,38 +62,27 @@ describe('História 8 — confirmação de retirada da doação', () => {
   });
 
   it('[8.1] confirma a retirada de uma doação aceita', async () => {
-    const criada = await publicar();
-    const id = criada.body.id;
+    const id = await criarDoacaoAceita();
 
-    await aceitar(id);
-
-    const res = await retirar(id, {
-      motorista: 'João Silva'
-    });
+    const res = await retirar(id, { motorista: MOTORISTA });
 
     expect(res.status).toBe(200);
     expect(res.body.id).toBe(id);
     expect(res.body.status).toBe('retirada');
-    expect(res.body.motorista).toBe('João Silva');
+    expect(res.body.motorista).toBe(MOTORISTA);
     expect(res.body.retirada_em).toBeTruthy();
   });
 
   it('[8.2] preserva o histórico da doação após a retirada', async () => {
-    const criada = await publicar();
-    const id = criada.body.id;
+    const id = await criarDoacaoAceita();
 
-    await aceitar(id);
+    await retirar(id, { motorista: 'Maria Oliveira' });
 
-    await retirar(id, {
-      motorista: 'Maria Oliveira'
-    });
-
-    const res = await request(app)
-      .get(`/api/doacoes/${id}`);
+    const res = await consultar(id);
 
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('retirada');
-    expect(res.body.ong).toBe('ONG Esperança');
+    expect(res.body.ong).toBe(ONG);
     expect(res.body.motorista).toBe('Maria Oliveira');
     expect(res.body.criada_em).toBeTruthy();
     expect(res.body.aceita_em).toBeTruthy();
@@ -78,32 +90,22 @@ describe('História 8 — confirmação de retirada da doação', () => {
   });
 
   it('[8.3] recusa retirada sem identificação do motorista', async () => {
-    const criada = await publicar();
-    const id = criada.body.id;
-
-    await aceitar(id);
+    const id = await criarDoacaoAceita();
 
     const res = await retirar(id, {});
 
     expect(res.status).toBe(400);
     expect(res.body.erro).toMatch(/motorista/i);
 
-    const consulta = await request(app)
-      .get(`/api/doacoes/${id}`);
-
+    const consulta = await consultar(id);
     expect(consulta.body.status).toBe('aceita');
     expect(consulta.body.retirada_em).toBeNull();
   });
 
   it('[8.4] recusa motorista com mais de 120 caracteres', async () => {
-    const criada = await publicar();
-    const id = criada.body.id;
+    const id = await criarDoacaoAceita();
 
-    await aceitar(id);
-
-    const res = await retirar(id, {
-      motorista: 'A'.repeat(121)
-    });
+    const res = await retirar(id, { motorista: 'A'.repeat(121) });
 
     expect(res.status).toBe(400);
     expect(res.body.erro).toMatch(/120 caracteres/i);
@@ -112,103 +114,70 @@ describe('História 8 — confirmação de retirada da doação', () => {
   it.each(['abc', '0', '-1', '2147483648'])(
     '[8.5] recusa ID inválido: %s',
     async (id) => {
-      const res = await retirar(id, {
-        motorista: 'João Silva'
-      });
+      const res = await retirar(id, { motorista: MOTORISTA });
 
       expect(res.status).toBe(400);
       expect(res.body.erro).toMatch(/ID de doação inválido/i);
-    }
+    },
   );
 
   it('[8.6] retorna 404 para doação inexistente', async () => {
-    const res = await retirar(999999, {
-      motorista: 'João Silva'
-    });
+    const res = await retirar(ID_INEXISTENTE, { motorista: MOTORISTA });
 
     expect(res.status).toBe(404);
     expect(res.body.erro).toBe('Doação não encontrada');
   });
 
   it('[8.7] impede retirada antes do aceite da ONG', async () => {
-    const criada = await publicar();
-    const id = criada.body.id;
+    const { body: { id } } = await publicar();
 
-    const res = await retirar(id, {
-      motorista: 'João Silva'
-    });
+    const res = await retirar(id, { motorista: MOTORISTA });
 
     expect(res.status).toBe(409);
     expect(res.body.erro).toMatch(/somente doações aceitas/i);
 
-    const consulta = await request(app)
-      .get(`/api/doacoes/${id}`);
-
+    const consulta = await consultar(id);
     expect(consulta.body.status).toBe('disponivel');
     expect(consulta.body.motorista).toBeNull();
     expect(consulta.body.retirada_em).toBeNull();
   });
 
   it('[8.8] impede confirmar duas vezes a mesma retirada', async () => {
-    const criada = await publicar();
-    const id = criada.body.id;
+    const id = await criarDoacaoAceita();
 
-    await aceitar(id);
-
-    const primeira = await retirar(id, {
-      motorista: 'João Silva'
-    });
-
-    const segunda = await retirar(id, {
-      motorista: 'Maria Oliveira'
-    });
+    const primeira = await retirar(id, { motorista: MOTORISTA });
+    const segunda = await retirar(id, { motorista: 'Maria Oliveira' });
 
     expect(primeira.status).toBe(200);
     expect(segunda.status).toBe(409);
     expect(segunda.body.erro).toMatch(/já foi retirada/i);
 
-    const consulta = await request(app)
-      .get(`/api/doacoes/${id}`);
-
-    expect(consulta.body.motorista).toBe('João Silva');
+    const consulta = await consultar(id);
+    expect(consulta.body.motorista).toBe(MOTORISTA);
     expect(consulta.body.retirada_em).toBe(primeira.body.retirada_em);
   });
 
   it('[8.9] permite somente uma confirmação simultânea', async () => {
-    const criada = await publicar();
-    const id = criada.body.id;
-
-    await aceitar(id);
+    const id = await criarDoacaoAceita();
 
     const [resA, resB] = await Promise.all([
       retirar(id, { motorista: 'Motorista A' }),
-      retirar(id, { motorista: 'Motorista B' })
+      retirar(id, { motorista: 'Motorista B' }),
     ]);
 
-    const status = [resA.status, resB.status].sort();
+    expect([resA.status, resB.status].sort()).toEqual([200, 409]);
 
-    expect(status).toEqual([200, 409]);
-
-    const consulta = await request(app)
-      .get(`/api/doacoes/${id}`);
-
+    const consulta = await consultar(id);
     expect(consulta.body.status).toBe('retirada');
-    expect(['Motorista A', 'Motorista B'])
-      .toContain(consulta.body.motorista);
+    expect(['Motorista A', 'Motorista B']).toContain(consulta.body.motorista);
   });
 
   it('[8.10] não exibe doações retiradas na lista de disponíveis', async () => {
-    const criada = await publicar();
-    const id = criada.body.id;
+    const id = await criarDoacaoAceita();
 
-    await aceitar(id);
+    await retirar(id, { motorista: MOTORISTA });
 
-    await retirar(id, {
-      motorista: 'João Silva'
-    });
-
-    const res = await request(app)
-      .get('/api/doacoes');
+    const res = await listar();
 
     expect(res.status).toBe(200);
     expect(res.body.some((doacao) => doacao.id === id)).toBe(false);
