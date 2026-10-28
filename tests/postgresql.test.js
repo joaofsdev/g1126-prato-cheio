@@ -10,16 +10,29 @@ import { daquiA } from './ajudantes.js';
 
 const app = criarApp();
 
-function publicar(dados) {
-  return request(app).post('/api/doacoes').send(dados);
+const DOACAO_VALIDA = { tipo: 'Pão', quantidade: '5 kg' };
+
+// --- Ajudantes ---------------------------------------------------------------
+
+function publicar(dados, aplicacao = app) {
+  return request(aplicacao).post('/api/doacoes').send(dados);
 }
 
+// --- Tipos e dialeto ---------------------------------------------------------
+
 describe('Migração para PostgreSQL — tipos e dialeto', () => {
-  beforeEach(async () => { await migrar(); await limparBanco(); });
-  afterAll(async () => { await encerrar(); });
+  beforeEach(async () => {
+    await migrar();
+    await limparBanco();
+  });
+
+  afterAll(async () => {
+    await encerrar();
+  });
 
   it('devolve a validade (DATE) como AAAA-MM-DD, sem deslocamento de fuso', async () => {
     const validade = daquiA(1);
+
     const res = await publicar({ tipo: 'Pão', quantidade: '20 unidades', validade });
 
     expect(res.status).toBe(201);
@@ -37,7 +50,7 @@ describe('Migração para PostgreSQL — tipos e dialeto', () => {
     ['texto livre', 'amanhã'],
     ['data que não existe', '2026-02-30'],
   ])('[0.1b] recusa validade em %s com 400 (e não 500 do banco)', async (_caso, validade) => {
-    const res = await publicar({ tipo: 'Pão', quantidade: '5 kg', validade });
+    const res = await publicar({ ...DOACAO_VALIDA, validade });
 
     expect(res.status).toBe(400);
     expect(res.body.erro).toMatch(/validade/);
@@ -59,14 +72,18 @@ describe('Migração para PostgreSQL — tipos e dialeto', () => {
   });
 });
 
+// --- Falha de banco ----------------------------------------------------------
+
 describe('Falha de banco', () => {
   // Banco inalcançável de verdade (porta fechada), injetado no app.
   const dbForaDoAr = criarDb('postgres://ninguem:senha@127.0.0.1:1/nenhum', {
-    connectionTimeoutMillis: 2000
+    connectionTimeoutMillis: 2000,
   });
   const appSemBanco = criarApp({ db: dbForaDoAr });
 
-  afterAll(async () => { await dbForaDoAr.encerrar(); });
+  afterAll(async () => {
+    await dbForaDoAr.encerrar();
+  });
 
   it('responde 503 ao listar quando o banco está fora do ar', async () => {
     const res = await request(appSemBanco).get('/api/doacoes');
@@ -76,9 +93,10 @@ describe('Falha de banco', () => {
   });
 
   it('responde 503 ao publicar quando o banco está fora do ar', async () => {
-    const res = await request(appSemBanco)
-      .post('/api/doacoes')
-      .send({ tipo: 'Sopa', quantidade: '10 porções', validade: daquiA(1) });
+    const res = await publicar(
+      { tipo: 'Sopa', quantidade: '10 porções', validade: daquiA(1) },
+      appSemBanco,
+    );
 
     expect(res.status).toBe(503);
   });
