@@ -2,6 +2,7 @@
 
 - **Data:** 2026-10-16
 - **Status:** aceito (substitui a parte "banco SQLite" do [ADR 0001](0001-escolha-da-stack.md); o resto da stack continua valendo)
+- **Revisado por:** [ADR 0004](0004-reavaliacao-para-varias-cidades.md) — reavaliação para várias cidades
 
 ## Contexto
 
