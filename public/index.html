@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="pt-BR">
 <head>
@@ -93,10 +94,18 @@
         lista.innerHTML = '<li>Não foi possível carregar as doações.</li>';
         return;
       }
-      lista.innerHTML = doacoes.length
+
+      const filtro = document.getElementById('filtro-tipo').value.trim().toLocaleLowerCase('pt-BR');
+
+      const doacoesFiltradas = doacoes.filter((d) =>
+        d.tipo.toLocaleLowerCase('pt-BR').includes(filtro)
+      );
+
+      lista.innerHTML = doacoesFiltradas.length
         ? ''
-        : '<li>Nenhuma doação disponível.</li>';
-      for (const d of doacoes) {
+        : '<li>Nenhuma doação encontrada.</li>';
+
+      for (const d of doacoesFiltradas) {
         const li = document.createElement('li');
         li.textContent = `#${d.id} ${d.tipo} — ${d.quantidade} (até ${d.validade}) `;
         const botao = document.createElement('button');
@@ -205,6 +214,8 @@
         saida.append(dt, dd);
       }
     };
+
+    document.getElementById('filtro-tipo').addEventListener('input', carregar);
 
     await carregar();
   </script>
