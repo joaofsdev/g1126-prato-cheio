@@ -118,6 +118,24 @@ git push -u origin historia/ong-aceita-doacao
 Abra o Pull Request no GitHub, preencha o template, espere o **CI ficar verde** e
 peça a revisão de **outro integrante**. Só então faça o merge.
 
+## Definição de Pronto (Definition of Done — DoD)
+
+Uma história de usuário será considerada pronta pelo grupo quando atender aos seguintes critérios:
+
+- [ ] **Critérios de aceitação:** todos os critérios definidos para a história foram implementados e validados.
+- [ ] **Funcionalidade:** a implementação foi testada manualmente, apresentando o comportamento esperado.
+- [ ] **Testes automatizados:** os testes necessários foram implementados e a suíte completa foi executada com sucesso (`npm test`).
+- [ ] **Qualidade do código:** as alterações seguem a estrutura e os padrões existentes no projeto, sem comprometer funcionalidades anteriores.
+- [ ] **Documentação:** a história, suas regras de negócio e eventuais alterações técnicas foram registradas na documentação do projeto.
+- [ ] **Banco de dados:** quando houver alterações no schema, elas foram versionadas por migrations e validadas no PostgreSQL.
+- [ ] **Controle de versão:** as alterações foram registradas em commits organizados, dentro de uma branch específica.
+- [ ] **Revisão de código:** o Pull Request foi revisado e aprovado por pelo menos outro integrante do grupo.
+- [ ] **Integração contínua:** o pipeline de CI do GitHub Actions foi executado com sucesso.
+- [ ] **Uso de IA:** quando utilizada, a participação da IA foi documentada no Pull Request, indicando o que foi mantido, o que foi alterado e as justificativas.
+- [ ] **Integração:** a história foi integrada à branch `main` somente após a aprovação da revisão e a confirmação do CI verde.
+
+A história somente será considerada **concluída** quando todos os critérios aplicáveis forem atendidos. Itens não aplicáveis, como alterações no banco de dados, devem ser identificados e justificados no Pull Request.
+
 ## Análise (Unidade 1)
 
 Toda a análise — problema, stakeholders, regras de negócio, conflito de prioridade,
@@ -154,6 +172,13 @@ aceita (`POST /api/doacoes/:id/retirar`), informando seu nome. A doação passa 
 `motorista` e `retirada_em` registrados. Só uma doação `aceita` pode ser retirada, e uma segunda
 confirmação, mesmo simultânea, é recusada (`409`). Testes em `tests/retirada.test.js`; schema em
 `migrations/002_adiciona_confirmacao_retirada.sql`.
+
+**Pronto para revisão (História 9 — filtrar doações por tipo de alimento):** a ONG pode pesquisar
+as doações disponíveis pelo tipo de alimento diretamente na interface. A filtragem ocorre
+em tempo real, aceita correspondências parciais e ignora diferenças entre letras maiúsculas
+e minúsculas. Quando não há resultados, uma mensagem informativa é apresentada. Ao limpar
+o campo, a listagem completa é restaurada. Testes em `tests/filtro-doacoes.test.js`.
+A integração depende da aprovação da PR e do CI verde.
 
 **Falta (limites conhecidos, registrados em `docs/analise.md`):**
 - sem autenticação: qualquer pessoa pode aceitar em nome de qualquer ONG;
